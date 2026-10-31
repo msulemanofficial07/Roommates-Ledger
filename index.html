@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roommates Ledger</title>
+<style>
+:root{--navy:#0f2a4a;--navy2:#1b3f6b;--blue:#2563eb;--bg:#f2f5fa;--card:#fff;--ink:#14213a;--mut:#5b6b85;--line:#dde4ee;--green:#15803d;--red:#b91c1c;--gbg:#e7f6ec;--rbg:#fdeaea}
+*{box-sizing:border-box}
+body{margin:0;font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+header h1{font-size:20px;margin:0;flex:1;min-width:150px}
+header .who{font-size:14px;opacity:.85}
+nav{display:flex;gap:6px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{white-space:nowrap}
+main{max-width:980px;margin:0 auto;padding:16px}
+h2{font-size:21px;margin:4px 0 12px}h3{font-size:18px;margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.stat{border-radius:10px;padding:14px;border:1px solid var(--line);background:#fff}
+.stat small{display:block;color:var(--mut)}.stat b{font-size:26px}
+.stat.g{background:var(--gbg)}.stat.g b{color:var(--green)}.stat.r{background:var(--rbg)}.stat.r b{color:var(--red)}.stat.z{background:#eceff3}.stat.z b{color:#6b7280}
+button,.btn{font:inherit;font-weight:600;border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:8px;padding:10px 14px;cursor:pointer;min-height:44px}
+button.alt{background:#fff;color:var(--blue)}button.warn{background:#fff;color:var(--red);border-color:var(--red)}
+button.sm{padding:6px 10px;min-height:36px;font-size:15px}
+nav button{background:#fff;color:var(--navy);border-color:var(--line)}nav button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+header button{background:transparent;border-color:#8fa6c6;color:#fff;min-height:38px;padding:6px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #93b4f5;outline-offset:1px}
+.profiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.profile{background:#fff;color:var(--navy);border:2px solid var(--line);border-radius:12px;padding:22px;font-size:20px;text-align:left}
+.profile:hover{border-color:var(--blue)}
+label{display:block;font-weight:600;margin:10px 0 0;font-size:15px}
+input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid #b9c5d8;border-radius:8px;margin-top:4px;background:#fff;color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:0 0 auto}.grow{flex:1 1 160px!important}
+table{width:100%;border-collapse:collapse}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--mut)}td.n,th.n{text-align:right;white-space:nowrap}
+.scroll{overflow-x:auto}
+.pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}.mut{color:var(--mut);font-size:14px}
+.tag{font-size:13px;background:#e8eefb;color:var(--navy2);border-radius:5px;padding:1px 6px}
+tr.click{cursor:pointer}tr.click:hover{background:#f6f9ff}
+.note{background:#fff8e1;border:1px solid #f1d98a;border-radius:8px;padding:10px 12px;font-size:15px}
+.ov{position:fixed;inset:0;background:rgba(10,20,40,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:18px}
+@media(min-width:640px){.ov{align-items:center}.sheet{border-radius:14px}}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;z-index:30;max-width:90%}
+.imgs img{width:100%;border:1px solid var(--line);border-radius:8px;margin:8px 0 4px}
+#printArea{display:none}
+@media print{body>*:not(#printArea){display:none!important}#printArea{display:block;color:#000}
+#printArea h1{color:#0f2a4a;margin:0 0 4px}#printArea table{font-size:13px}#printArea .box{border:1px solid #999;padding:10px;margin-top:12px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="printArea"></div>
+<script>
+const KEY='roommates_ledger_v1',UK='roommates_ledger_user';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const iso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const today=()=>iso(new Date());
+const fdate=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const money=p=>'Rs. '+(Math.abs(p)/100).toLocaleString('en-PK',{minimumFractionDigits:p%100?2:0,maximumFractionDigits:2});
+const toPaisa=v=>Math.round(parseFloat(v)*100);
+
+let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!Array.isArray(S.roommates)||!Array.isArray(S.txs)){S={roommates:['M. Suleman','M. Youaan','Shamshad','Ihsan'].map(n=>({id:uid(),name:n})),txs:[]};save()}
+let me=null;try{me=localStorage.getItem(UK)}catch(e){}
+if(me&&!S.roommates.some(r=>r.id===me))me=null;
+// Ihsan is the default ledger owner on first open
+if(!me){const ih=S.roommates.find(r=>r.name==='Ihsan');if(ih){me=ih.id;try{localStorage.setItem(UK,me)}catch(e){}}}
+let ui={view:'home',acct:null,range:'all',from:'',to:'',q:''};
+
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save data. Browser storage may be full or blocked.')}}
+const nm=id=>{const r=S.roommates.find(x=>x.id===id);return r?r.name:'Unknown'};
+const sgn=t=>((t.kind==='item')===(t.dir==='in'))?1:-1;
+const mine=a=>S.txs.filter(t=>t.owner===me&&t.account===a).sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.created-y.created);
+const net=(a,ex)=>mine(a).filter(t=>t.id!==ex).reduce((s,t)=>s+sgn(t)*t.amount,0);
+const others=()=>S.roommates.filter(r=>r.id!==me);
+function balText(n){return n>0?`They owe you ${money(n)}`:n<0?`You owe them ${money(n)}`:'Account settled'}
+function balCls(n){return n>0?'pos':n<0?'neg':'mut'}
+function typeLabel(t){return t.kind==='item'?(t.dir==='in'?'Item provided':'Item from them'):(t.dir==='in'?'Payment received':'Payment made')}
+function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):'Payment'+(t.method?' via '+t.method:'')}
+function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
+function modal(h){closeModal();const o=document.createElement('div');o.className='ov';o.id='modal';o.innerHTML='<div class="sheet">'+h+'</div>';o.addEventListener('mousedown',e=>{if(e.target===o)closeModal()});document.body.appendChild(o)}
+function closeModal(){const o=$('#modal');if(o)o.remove()}
+
+/* ---------- Rendering ---------- */
+function render(){
+  const app=$('#app');
+  if(!me){
+    app.innerHTML=`<header><h1>Roommates Ledger</h1></header><main><h2>Who are you?</h2><p class="mut">Choose your name to open your personal ledger. Your choice is remembered on this device.</p><div class="profiles">${S.roommates.map(r=>`<button class="profile" data-a="pick" data-id="${r.id}">${esc(r.name)}</button>`).join('')}</div><div class="note" style="margin-top:16px">This is a device-based ledger. Records stay in this browser and are not shared automatically with other phones. Use statements and backups to share them.</div></main>`;return}
+  const tabs=[['home','Dashboard'],['all','Transactions'],['mates','Roommates'],['backup','Backup']];
+  let body='';
+  if(ui.view==='home')body=home();else if(ui.view==='acct')body=acct();else if(ui.view==='all')body=allView();else if(ui.view==='mates')body=mates();else body=backup();
+  app.innerHTML=`<header><h1>Roommates Ledger</h1><span class="who">Ledger of ${esc(nm(me))}</span><button data-a="switch">Switch user</button></header>
+  <nav>${tabs.map(t=>`<button class="${ui.view===t[0]||(ui.view==='acct'&&t[0]==='home')?'on':''}" data-a="nav" data-v="${t[0]}">${t[1]}</button>`).join('')}</nav><main>${body}</main>`;
+  if(ui.view==='acct'||ui.view==='all')renderList();
+}
+function home(){
+  let rec=0,pay=0;
+  const owner=esc(nm(me));
+  const cards=others().map(r=>{const n=net(r.id);if(n>0)rec+=n;else pay-=n;
+    return `<div class="stat ${n>0?'g':n<0?'r':'z'}" style="cursor:pointer" data-a="open" data-id="${r.id}"><small>${esc(r.name)}</small><b>${money(n)}</b><small>${balText(n).replace(/ Rs\..*/,'').replace(/^You /,owner+' ').replace('owe you',"owe "+owner)}</small></div>`}).join('');
+  const nt=rec-pay;
+  const recent=S.txs.filter(t=>t.owner===me).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:b.created-a.created).slice(0,6);
+  return `<div class="grid"><div class="stat g"><small>Owed to ${owner}</small><b>${money(rec)}</b></div><div class="stat r"><small>${owner} owes roommates</small><b>${money(pay)}</b></div><div class="stat"><small>Net balance</small><b class="${balCls(nt)}">${nt<0?'−':''}${money(nt)}</b></div><div class="stat"><small>Total outstanding</small><b>${money(rec+pay)}</b></div><div class="stat"><small>Roommate accounts</small><b>${others().length}</b></div></div>
+  <div class="row" style="margin:14px 0"><button class="grow" data-a="form" data-k="item">+ Add purchase</button><button class="grow alt" data-a="form" data-k="payment">+ Add repayment</button></div>
+  <h3>Roommate accounts</h3><div class="grid" style="margin-bottom:14px">${cards||'<p class="mut">Add roommates to begin.</p>'}</div>
+  <div class="card"><h3>Recent transactions</h3>${recent.length?`<div class="scroll"><table><tr><th>Date</th><th>Roommate</th><th>Details</th><th class="n">Amount</th></tr>${recent.map(t=>`<tr><td>${fdate(t.date)}</td><td>${esc(nm(t.account))}</td><td>${esc(detail(t))}<br><span class="tag">${typeLabel(t)}</span></td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td></tr>`).join('')}</table></div>`:'<p class="mut">No transactions yet. Add a purchase to start.</p>'}</div>
+  <div class="note">Each person keeps their own ledger on their own device. Nothing syncs automatically between phones. Share statements through WhatsApp instead.</div>`;
+}
+function inRange(t){
+  const d=t.date,td=today();
+  if(ui.range==='today')return d===td;
+  if(ui.range==='week'){const x=new Date();const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);return d>=iso(x)&&d<=td}
+  if(ui.range==='month')return d.slice(0,7)===td.slice(0,7);
+  if(ui.range==='custom')return(!ui.from||d>=ui.from)&&(!ui.to||d<=ui.to);
+  return true;
+}
+function runRows(a){let b=0;return mine(a).map(t=>{b+=sgn(t)*t.amount;return{t,b}})}
+function acct(){
+  const a=ui.acct,n=net(a);
+  return `<div class="row"><button class="alt sm" data-a="nav" data-v="home">← Back</button><h2 class="grow" style="margin:0">${esc(nm(a))}</h2></div>
+  <div class="card" style="margin-top:12px"><div class="${balCls(n)}" style="font-size:24px">${balText(n)}</div><div id="sums" class="mut"></div>
+  <div class="row" style="margin-top:12px"><button data-a="form" data-k="item" data-acct="${a}">+ Item</button><button class="alt" data-a="form" data-k="payment" data-acct="${a}">+ Payment</button></div>
+  <div class="row" style="margin-top:8px"><button class="alt sm" data-a="pdf">PDF statement</button><button class="alt sm" data-a="png">PNG image</button><button class="alt sm" data-a="wa" data-w="stmt">WhatsApp statement</button><button class="alt sm" data-a="wa" data-w="sum">WhatsApp summary</button></div></div>
+  ${filters()}`;
+}
+// Shared filter + search card
+function filters(){return `<div class="card"><div class="row"><select class="grow" id="range" data-f="range"><option value="all">All records</option><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom range</option></select>
+  <input class="grow" id="q" data-f="q" type="search" placeholder="Search item or roommate name" value="${esc(ui.q)}"></div>
+  <div class="row" id="cust" style="display:${ui.range==='custom'?'flex':'none'}"><label class="grow">From<input type="date" data-f="from" value="${ui.from}"></label><label class="grow">To<input type="date" data-f="to" value="${ui.to}"></label></div>
+  <div id="list" class="scroll" style="margin-top:10px"></div></div>`}
+function allView(){return `<h2>All transactions</h2>${filters()}`}
+function sumLines(a){
+  const T=mine(a),f=(k,d)=>T.filter(t=>t.kind===k&&t.dir===d).reduce((s,t)=>s+t.amount,0);
+  const L=[['Total purchases (items you provided)',f('item','in')],['Total repayments (they paid you)',f('payment','in')]];
+  if(f('item','out'))L.push(['Items they provided to you',f('item','out')]);
+  if(f('payment','out'))L.push(['Payments you made to them',f('payment','out')]);
+  return L;
+}
+function renderList(){
+  $('#range').value=ui.range;
+  const all=ui.view==='all';
+  let rr=all?others().flatMap(r=>runRows(r.id)).sort((x,y)=>x.t.date<y.t.date?-1:x.t.date>y.t.date?1:x.t.created-y.t.created):runRows(ui.acct);
+  const q=ui.q.trim().toLowerCase();
+  const rows=rr.filter(x=>inRange(x.t)&&(!q||(detail(x.t)+' '+(x.t.notes||'')+' '+typeLabel(x.t)+' '+nm(x.t.account)).toLowerCase().includes(q))).reverse();
+  if($('#sums'))$('#sums').innerHTML=sumLines(ui.acct).map(l=>`${l[0]}: <b>${money(l[1])}</b>`).join('<br>');
+  $('#list').innerHTML=rows.length?`<table><tr><th>Date</th><th>Details</th><th class="n">Amount</th><th class="n">Balance</th><th></th></tr>${rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td><b>${all?esc(nm(t.account))+': ':''}${esc(detail(t))}</b><br><span class="tag">${typeLabel(t)}</span> <span class="mut">${esc(t.notes||'')}</span></td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n ${balCls(b)}">${b<0?'−':''}${money(b)}</td><td class="n"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button> <button class="alt sm" data-a="wa" data-w="tx" data-id="${t.id}">WhatsApp</button> <button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mut">No transactions found. Add a purchase or repayment to get started.</p>';
+}
+function mates(){
+  return `<h2>Roommates</h2><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">you</span>':''}</b><button class="alt sm" data-a="ren" data-id="${r.id}">Edit name</button><button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button></div>`).join('')}
+  <div class="row" style="margin-top:14px"><input class="grow" id="newName" placeholder="New roommate name"><button data-a="add">Add roommate</button></div></div>
+  <div class="note">A roommate can only be removed if no transaction on this device involves them.</div>`;
+}
+function backup(){
+  return `<h2>Backup and restore</h2><div class="card"><div class="row"><button data-a="export">Export backup (JSON)</button><button class="alt" data-a="import">Import backup</button></div><input type="file" id="file" accept=".json,application/json" hidden>
+  <p class="mut">Importing replaces all data currently on this device, so export first if unsure.</p></div>
+  <div class="card"><h3>How storage works</h3><p>Records are saved only in this browser on this device. Another phone or browser has its own separate records. To move your ledger, export a backup, send the file to the other device, and import it there. Clearing browser data deletes your ledger, so back up regularly.</p></div>`;
+}
+
+/* ---------- Forms ---------- */
+function form(kind,id,acctId){
+  const t=id?S.txs.find(x=>x.id===id):null;if(t)kind=t.kind;
+  if(!others().length)return toast('Add another roommate first.');
+  const it=kind==='item',sel=t?t.account:(acctId||ui.acct);
+  const dirs=it?[['in','I provided it — they owe me'],['out','They provided it — I owe them']]:[['in','They paid me'],['out','I paid them']];
+  modal(`<h2>${t?'Edit':'Add'} ${it?'item':'payment'}</h2><form id="f" data-kind="${kind}" data-id="${id||''}">
+  <label>Roommate<select name="account">${others().map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label>
+  <label>${it?'Who provided it?':'Direction'}<select name="dir">${dirs.map(d=>`<option value="${d[0]}" ${t&&t.dir===d[0]?'selected':''}>${d[1]}</option>`).join('')}</select></label>
+  ${it?`<label>Item name<input name="desc" required maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Roti"></label>`:`<label>Payment method (optional)<input name="method" maxlength="40" value="${esc(t?t.method:'')}" placeholder="Cash, JazzCash, Easypaisa…"></label>`}
+  <label>Amount (PKR)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" required value="${t?t.amount/100:''}"></label>
+  <label>Date<input name="date" type="date" required value="${t?t.date:today()}"></label>
+  ${it?`<label>Quantity (optional)<input name="qty" maxlength="30" value="${esc(t?t.qty:'')}" placeholder="e.g. 4 pieces"></label>`:''}
+  <label>Notes (optional)<textarea name="notes" rows="2" maxlength="300">${esc(t?t.notes:'')}</textarea></label>
+  <div class="row" style="margin-top:14px"><button class="grow" type="submit">Save</button><button class="alt grow" type="button" data-a="close">Cancel</button></div></form>`);
+}
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='f')return;e.preventDefault();
+  const f=e.target,v=Object.fromEntries(new FormData(f)),kind=f.dataset.kind,id=f.dataset.id;
+  const amt=toPaisa(v.amount);
+  if(!(amt>0))return toast('Enter an amount greater than zero.');
+  if(v.account===me||!S.roommates.some(r=>r.id===v.account))return toast('Choose a different roommate.');
+  if(!v.date)return toast('Choose a date.');
+  if(kind==='item'&&!v.desc.trim())return toast('Enter an item name.');
+  if(kind==='payment'){
+    const n=net(v.account,id||null);
+    if(v.dir==='in'){if(amt>Math.max(n,0))return toast(n>0?`They only owe you ${money(n)}. Payment is too high.`:'They owe you nothing right now.')}
+    else if(amt>Math.max(-n,0))return toast(-n>0?`You only owe them ${money(-n)}. Payment is too high.`:'You owe them nothing right now.');
+  }
+  const now=Date.now(),data={account:v.account,dir:v.dir,amount:amt,date:v.date,notes:(v.notes||'').trim(),kind,desc:kind==='item'?v.desc.trim():'Payment',qty:(v.qty||'').trim(),method:(v.method||'').trim()};
+  if(id){Object.assign(S.txs.find(t=>t.id===id),data,{updated:now})}
+  else S.txs.push(Object.assign({id:uid(),owner:me,created:now,updated:now},data));
+  save();closeModal();toast('Saved');render();
+});
+
+/* ---------- Statements ---------- */
+function stData(a){return{rows:runRows(a),net:net(a),lines:sumLines(a)}}
+function pdf(){
+  const a=ui.acct,d=stData(a);
+  $('#printArea').innerHTML=`<h1>Roommates Ledger</h1><p><b>Account statement</b></p><p>Ledger owner: <b>${esc(nm(me))}</b><br>Account holder: <b>${esc(nm(a))}</b><br>Generated: ${fdate(today())}</p>
+  <table><tr><th>Date</th><th>Details</th><th>Type</th><th class="n">Amount</th><th class="n">Balance</th></tr>${d.rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td>${esc(detail(t))}${t.notes?'<br><i>'+esc(t.notes)+'</i>':''}</td><td>${typeLabel(t)}</td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n">${b<0?'−':''}${money(b)}</td></tr>`).join('')}</table>
+  <div class="box">${d.lines.map(l=>`${l[0]}: <b>${money(l[1])}</b>`).join('<br>')}<br><br><b style="font-size:18px">Remaining balance: ${balText(d.net)}</b></div>
+  <p style="font-size:12px;margin-top:14px">Generated by Roommates Ledger. This is a personal record kept on one device.</p>`;
+  toast('Choose "Save as PDF" in the print dialog');setTimeout(()=>window.print(),300);
+}
+function fit(c,s,w){if(c.measureText(s).width<=w)return s;while(s.length>1&&c.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…'}
+function pngPages(a){
+  const d=stData(a),W=1080,P=48,RH=72,PER=12,chunks=[];
+  for(let i=0;i<d.rows.length;i+=PER)chunks.push(d.rows.slice(i,i+PER));
+  if(!chunks.length)chunks.push([]);
+  if(chunks[chunks.length-1].length>8)chunks.push([]);
+  const sumH=60+d.lines.length*48+110;
+  return Promise.all(chunks.map((rows,i)=>new Promise(res=>{
+    const last=i===chunks.length-1,top=310,H=top+(rows.length?56:0)+rows.length*RH+(last?sumH:0)+90;
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+    c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,170);
+    c.fillStyle='#fff';c.font='bold 54px Arial,sans-serif';c.fillText('Roommates Ledger',P,88);
+    c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('Account statement'+(chunks.length>1?`  •  Page ${i+1} of ${chunks.length}`:''),P,132);
+    c.fillStyle='#14213a';c.font='30px Arial,sans-serif';
+    c.fillText('Ledger owner: '+nm(me),P,222);c.fillText('Account holder: '+nm(a),P,264);
+    c.textAlign='right';c.fillStyle='#5b6b85';c.font='26px Arial,sans-serif';c.fillText('Generated '+fdate(today()),W-P,222);c.textAlign='left';
+    let y=top;
+    if(rows.length){c.fillStyle='#e8eefb';c.fillRect(0,y,W,56);c.fillStyle='#1b3f6b';c.font='bold 24px Arial,sans-serif';
+      c.fillText('Date',P,y+37);c.fillText('Details',P+200,y+37);c.textAlign='right';c.fillText('Amount',790,y+37);c.fillText('Balance',W-P,y+37);c.textAlign='left';y+=56}
+    rows.forEach(({t,b},k)=>{
+      if(k%2){c.fillStyle='#f6f8fc';c.fillRect(0,y,W,RH)}
+      c.fillStyle='#14213a';c.font='24px Arial,sans-serif';c.fillText(fdate(t.date),P,y+44);
+      c.font='bold 27px Arial,sans-serif';c.fillText(fit(c,detail(t),400),P+200,y+32);
+      c.fillStyle='#5b6b85';c.font='20px Arial,sans-serif';c.fillText(fit(c,typeLabel(t)+(t.notes?' • '+t.notes:''),400),P+200,y+58);
+      c.textAlign='right';c.fillStyle='#14213a';c.font='bold 26px Arial,sans-serif';c.fillText((sgn(t)>0?'+':'−')+money(t.amount),790,y+44);
+      c.fillStyle=b>0?'#15803d':b<0?'#b91c1c':'#5b6b85';c.fillText((b<0?'−':'')+money(b),W-P,y+44);c.textAlign='left';y+=RH});
+    if(last){
+      y+=30;const bh=d.lines.length*48+110;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,bh);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,bh);
+      let yy=y+46;c.font='26px Arial,sans-serif';
+      d.lines.forEach(l=>{c.fillStyle='#14213a';c.textAlign='left';c.fillText(l[0],P+20,yy);c.textAlign='right';c.font='bold 26px Arial,sans-serif';c.fillText(money(l[1]),W-P-20,yy);c.font='26px Arial,sans-serif';yy+=48});
+      c.textAlign='left';c.font='bold 32px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,balText(d.net),W-2*P-40),P+20,yy+24);
+    }
+    c.fillStyle='#8a97ad';c.font='20px Arial,sans-serif';c.textAlign='center';c.fillText('Roommates Ledger  •  Personal record kept on one device',W/2,H-34);
+    cv.toBlob(bl=>res(bl),'image/png');
+  })));
+}
+async function png(){
+  const a=ui.acct;toast('Creating images…');
+  const blobs=await pngPages(a);const base=`ledger-${nm(me)}-${nm(a)}`.replace(/[^\w]+/g,'_');
+  const files=blobs.map((b,i)=>new File([b],`${base}_${i+1}.png`,{type:'image/png'}));
+  window._files=files;
+  modal(`<h2>Statement images</h2><p class="mut">${files.length>1?files.length+' pages created so the text stays readable.':'Ready to download or share.'}</p><div class="imgs">${files.map((f,i)=>`<img alt="Statement page ${i+1}" src="${URL.createObjectURL(f)}"><a class="btn" style="display:inline-block;text-decoration:none" download="${f.name}" href="${URL.createObjectURL(f)}">Download page ${i+1}</a>`).join('')}</div>
+  <div class="row" style="margin-top:12px"><button class="grow" data-a="shareImg">Share (WhatsApp, etc.)</button><button class="alt grow" data-a="close">Close</button></div>`);
+}
+async function shareImg(){
+  const files=window._files||[];
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title:'Roommates Ledger statement'})}catch(e){}}
+  else{toast('Sharing files is not supported here. Download the image, then attach it in WhatsApp.');waOpen(text('stmt'))}
+}
+function text(w,id){
+  const a=ui.acct,n=net(a);
+  if(w==='tx'){const t=S.txs.find(x=>x.id===id);return `*Roommates Ledger*\n${typeLabel(t)}\nFrom ledger of: ${nm(me)}\nAccount: ${nm(t.account)}\nDate: ${fdate(t.date)}\n${detail(t)}: ${money(t.amount)}${t.notes?'\nNote: '+t.notes:''}\n\nBalance now: ${balText(net(t.account))}`}
+  if(w==='sum')return `*Roommates Ledger — Summary*\nLedger of: ${nm(me)}\nAccount: ${nm(a)}\n${balText(n)}\nDate: ${fdate(today())}`;
+  const d=stData(a);
+  return `*Roommates Ledger — Statement*\nLedger of: ${nm(me)}\nAccount: ${nm(a)}\nDate: ${fdate(today())}\n\n`+d.rows.map(({t})=>`${fdate(t.date)} | ${detail(t)} | ${sgn(t)>0?'+':'−'}${money(t.amount)}`).join('\n')+'\n\n'+d.lines.map(l=>`${l[0]}: ${money(l[1])}`).join('\n')+`\n*${balText(n)}*`;
+}
+function waOpen(t){window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')}
+
+/* ---------- Actions ---------- */
+function exportData(){
+  const b=new Blob([JSON.stringify({app:'roommates-ledger',version:1,exported:new Date().toISOString(),roommates:S.roommates,txs:S.txs},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`roommates-ledger-backup-${today()}.json`;a.click();toast('Backup downloaded');
+}
+function importData(file){
+  const r=new FileReader();r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!Array.isArray(d.roommates)||!Array.isArray(d.txs)||!d.roommates.every(x=>x.id&&x.name)||!d.txs.every(t=>t.id&&t.owner&&t.account&&Number.isInteger(t.amount)&&t.date))throw 0;
+      if(!confirm(`Replace ALL data on this device with this backup (${d.roommates.length} roommates, ${d.txs.length} transactions)?`))return;
+      S={roommates:d.roommates,txs:d.txs};save();if(!S.roommates.some(x=>x.id===me)){me=null;localStorage.removeItem(UK)}
+      ui.view='home';render();toast('Backup restored');
+    }catch(e){alert('This file is not a valid Roommates Ledger backup.')}
+  };r.readAsText(file);
+}
+function act(a,d){
+  switch(a){
+    case 'pick':me=d.id;try{localStorage.setItem(UK,me)}catch(e){}ui.view='home';render();break;
+    case 'switch':me=null;try{localStorage.removeItem(UK)}catch(e){}render();break;
+    case 'nav':ui.view=d.v;render();break;
+    case 'open':ui.acct=d.id;ui.view='acct';ui.range='all';ui.q='';render();break;
+    case 'form':form(d.k,d.id,d.acct);break;
+    case 'close':closeModal();break;
+    case 'del':{const t=S.txs.find(x=>x.id===d.id);
+      if(confirm(`Delete this ${t.kind==='item'?'item':'payment'} (${detail(t)}, ${money(t.amount)}, ${fdate(t.date)})? This cannot be undone.`)){S.txs=S.txs.filter(x=>x.id!==d.id);save();render();toast('Deleted')}break}
+    case 'add':{const v=$('#newName').value.trim();if(!v)return toast('Enter a name.');
+      if(S.roommates.some(r=>r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
+      S.roommates.push({id:uid(),name:v});save();render();break}
+    case 'ren':{const r=S.roommates.find(x=>x.id===d.id);
+      modal(`<h2>Edit name</h2><label>Name<input id="rn" value="${esc(r.name)}" maxlength="40"></label><div class="row" style="margin-top:14px"><button class="grow" data-a="renOk" data-id="${r.id}">Save</button><button class="alt grow" data-a="close">Cancel</button></div>`);break}
+    case 'renOk':{const v=$('#rn').value.trim();if(!v)return toast('Enter a name.');
+      if(S.roommates.some(r=>r.id!==d.id&&r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
+      S.roommates.find(r=>r.id===d.id).name=v;save();closeModal();render();break}
+    case 'rem':{if(S.txs.some(t=>t.owner===d.id||t.account===d.id))return alert('This roommate has transactions on this device, so they cannot be removed.');
+      if(d.id===me)return alert('Switch to another user before removing this profile.');
+      if(S.roommates.length<=2)return alert('Keep at least two roommates.');
+      if(confirm(`Remove ${nm(d.id)}?`)){S.roommates=S.roommates.filter(r=>r.id!==d.id);save();render()}break}
+    case 'pdf':pdf();break;
+    case 'png':png();break;
+    case 'shareImg':shareImg();break;
+    case 'wa':waOpen(text(d.w,d.id));break;
+    case 'export':exportData();break;
+    case 'import':$('#file').click();break;
+  }
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset)});
+document.addEventListener('change',e=>{
+  if(e.target.id==='file'&&e.target.files[0]){importData(e.target.files[0]);e.target.value='';return}
+  const f=e.target.dataset.f;if(!f)return;ui[f]=e.target.value;
+  if(f==='range')$('#cust').style.display=ui.range==='custom'?'flex':'none';renderList();
+});
+document.addEventListener('input',e=>{if(e.target.dataset.f==='q'){ui.q=e.target.value;renderList()}});
+render();
+</script>
+</body>
+</html>
