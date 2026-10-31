@@ -44,6 +44,8 @@ tr.click{cursor:pointer}tr.click:hover{background:#f6f9ff}
 @media(min-width:640px){.ov{align-items:center}.sheet{border-radius:14px}}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;z-index:30;max-width:90%}
 .imgs img{width:100%;border:1px solid var(--line);border-radius:8px;margin:8px 0 4px}
+.export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin-top:12px}
+.export-grid button{width:100%}.export-period{margin-top:8px}
 #printArea{display:none}
 @media print{body>*:not(#printArea){display:none!important}#printArea{display:block;color:#000}
 #printArea h1{color:#0f2a4a;margin:0 0 4px}#printArea table{font-size:13px}#printArea thead{display:table-header-group}
@@ -127,7 +129,7 @@ function acct(){
   return `<div class="row"><button class="alt sm" data-a="nav" data-v="home">← Back</button><h2 class="grow" style="margin:0">${esc(nm(a))}</h2></div>
   <div class="card" style="margin-top:12px"><div class="${balCls(n)}" style="font-size:24px">${balText(n,a)}</div><div id="sums" class="mut"></div>
   <div class="row" style="margin-top:12px"><button data-a="form" data-k="item" data-acct="${a}">+ Item</button><button class="alt" data-a="form" data-k="payment" data-acct="${a}">+ Payment</button></div>
-  <div class="row" style="margin-top:8px"><button class="alt sm" data-a="pdf">PDF statement</button><button class="alt sm" data-a="png">PNG image</button><button class="alt sm" data-a="wa" data-w="stmt">WhatsApp statement</button><button class="alt sm" data-a="wa" data-w="sum">WhatsApp summary</button></div></div>
+  <div class="row" style="margin-top:8px"><button class="alt" data-a="exportPanel">Export / Share Account</button><button class="alt sm" data-a="wa" data-w="sum">WhatsApp summary</button></div></div>
   ${filters()}`;
 }
 // Shared filter + search card
@@ -202,70 +204,196 @@ document.addEventListener('submit',e=>{
 });
 
 /* ---------- Statements ---------- */
-function stData(a){return{rows:runRows(a),net:net(a),lines:sumLines(a)}}
-function pdf(){
-  const a=ui.acct,d=stData(a);
-  $('#printArea').innerHTML=`<h1>Roommates Ledger</h1><p><b>Account statement</b></p><p>Ledger owner: <b>${esc(nm(me))}</b><br>Account holder: <b>${esc(nm(a))}</b><br>Generated: ${fdate(today())}</p>
-  <table><thead><tr><th>Date</th><th>Details</th><th>Type</th><th class="n">Amount</th><th class="n">Balance</th></tr></thead><tbody>${d.rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td>${esc(detail(t))}${t.notes?'<br><i>'+esc(t.notes)+'</i>':''}</td><td>${typeLabel(t)}</td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n">${b<0?'−':''}${money(b)}</td></tr>`).join('')}</tbody></table>
+function periodLabel(period){
+  if(period!=='filtered'||ui.range==='all')return 'All time';
+  if(ui.range==='custom')return `${ui.from?fdate(ui.from):'Beginning'} – ${ui.to?fdate(ui.to):'Today'}`;
+  if(ui.range==='today')return 'Today';
+  if(ui.range==='week')return 'This week';
+  if(ui.range==='month')return 'This month';
+  return 'Current filtered period';
+}
+function stData(a,period='all'){
+  const history=runRows(a),rows=period==='filtered'?history.filter(x=>inRange(x.t)):history;
+  const total=(kind,dir)=>rows.filter(x=>x.t.kind===kind&&(!dir||x.t.dir===dir)).reduce((s,x)=>s+x.t.amount,0);
+  return{rows,net:net(a),lines:[
+    ['Total purchases / items',total('item')],
+    ['Total repayments / payments',total('payment')],
+    ['Total amount charged to account',total('item','in')],
+    ['Total amount repaid to ledger owner',total('payment','in')]
+  ],period:periodLabel(period)};
+}
+function exportPanel(){
+  const filtered=ui.range!=='all';
+  modal(`<h2>Export / Share Account</h2><p><b>${esc(nm(ui.acct))}</b> — choose the statement period and an export option.</p>
+  <label class="export-period">Statement period<select id="exportPeriod"><option value="all">All-time statement</option><option value="filtered" ${filtered?'selected':''} ${filtered?'':'disabled'}>Current filtered period (${esc(periodLabel('filtered'))})</option></select></label>
+  <div class="export-grid">
+  <button data-a="downloadPng">PNG Image</button><button data-a="downloadPdf">PDF Document</button>
+  <button data-a="sharePng">Share Image on WhatsApp</button><button data-a="sharePdf">Share PDF on WhatsApp</button>
+  <button class="alt" data-a="copySummary">Copy Account Summary</button><button class="alt" data-a="printStatement">Print Statement</button>
+  </div><p class="mut" role="status">Statements include only this roommate account. For WhatsApp file sharing, select WhatsApp in your device's share sheet.</p>
+  <div class="row" style="margin-top:12px"><button class="alt grow" data-a="close">Close</button></div>`);
+}
+function selectedPeriod(){return $('#exportPeriod')?$('#exportPeriod').value:'all'}
+function pdf(a=ui.acct,period='all'){
+  const d=stData(a,period);
+  $('#printArea').innerHTML=`<h1>ROOMMATES LEDGER</h1><p><b>Account Statement</b> — ${esc(d.period)}</p><p>Ledger owner: <b>${esc(nm(me))}</b><br>Account holder: <b>${esc(nm(a))}</b><br>Generated: ${fdate(today())}<br>Current outstanding: <b>${esc(balText(d.net,a))}</b></p>
+  <table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="n">Amount</th><th class="n">Balance</th></tr></thead><tbody>${d.rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td>${esc(detail(t))}${t.notes?'<br><i>'+esc(t.notes)+'</i>':''}</td><td>${typeLabel(t)}</td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n">${b<0?'−':''}${money(b)}</td></tr>`).join('')}</tbody></table>
   <div class="box">${d.lines.map(l=>`${l[0]}: <b>${money(l[1])}</b>`).join('<br>')}<br><br><b style="font-size:18px">Remaining balance: ${balText(d.net,a)}</b></div>
   <p style="font-size:12px;margin-top:14px">Generated by Roommates Ledger. This is a personal record kept on one device.</p>`;
-  toast('Choose "Save as PDF" in the print dialog');setTimeout(()=>window.print(),300);
+  return d;
+}
+function printStatement(a=ui.acct,period='all'){
+  pdf(a,period);toast('Use your browser’s print dialog to print or save as PDF.');setTimeout(()=>window.print(),300);
 }
 function fit(c,s,w){if(c.measureText(s).width<=w)return s;while(s.length>1&&c.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…'}
-function pngPages(a){
-  const d=stData(a),W=1080,P=48,RH=72,PER=12,chunks=[];
+function pngPages(a,period='all'){
+  const d=stData(a,period),W=1080,P=48,RH=82,PER=10,chunks=[];
   for(let i=0;i<d.rows.length;i+=PER)chunks.push(d.rows.slice(i,i+PER));
   if(!chunks.length)chunks.push([]);
   if(chunks[chunks.length-1].length>8)chunks.push([]);
-  const sumH=60+d.lines.length*48+110;
+  const sumH=58+d.lines.length*48+144;
   return Promise.all(chunks.map((rows,i)=>new Promise((res,rej)=>{
-    const last=i===chunks.length-1,top=310,H=top+(rows.length?56:0)+rows.length*RH+(last?sumH:0)+90;
+    const last=i===chunks.length-1,top=390,H=top+(rows.length?58:0)+rows.length*RH+(last?sumH:0)+90;
     const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');if(!c)return rej(new Error('Canvas is unavailable.'));
     c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,170);
-    c.fillStyle='#fff';c.font='bold 54px Arial,sans-serif';c.fillText('Roommates Ledger',P,88);
-    c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('Account statement'+(chunks.length>1?`  •  Page ${i+1} of ${chunks.length}`:''),P,132);
-    c.fillStyle='#14213a';c.font='30px Arial,sans-serif';
-    c.fillText('Ledger owner: '+nm(me),P,222);c.fillText('Account holder: '+nm(a),P,264);
-    c.textAlign='right';c.fillStyle='#5b6b85';c.font='26px Arial,sans-serif';c.fillText('Generated '+fdate(today()),W-P,222);c.textAlign='left';
+    c.fillStyle='#fff';c.font='bold 52px Arial,sans-serif';c.fillText('ROOMMATES LEDGER',P,78);
+    c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('Account Statement'+(chunks.length>1?`  •  Page ${i+1} of ${chunks.length}`:''),P,126);
+    c.fillStyle='#14213a';c.font='bold 29px Arial,sans-serif';c.fillText('Account Holder: '+nm(a),P,220);
+    c.font='27px Arial,sans-serif';c.fillText('Ledger Owner: '+nm(me),P,266);c.fillText('Period: '+d.period,P,308);
+    c.fillStyle='#5b6b85';c.textAlign='right';c.fillText('Generated: '+fdate(today()),W-P,266);c.textAlign='left';
+    if(i===0){
+      c.fillStyle='#f2f5fa';c.fillRect(P,330,W-2*P,46);c.font='bold 22px Arial,sans-serif';c.fillStyle='#1b3f6b';
+      c.fillText('PURCHASES '+money(d.lines[0][1]),P+16,360);c.fillText('REPAYMENTS '+money(d.lines[1][1]),P+365,360);
+      c.fillText('CURRENT BALANCE '+fit(c,balText(d.net,a),410),P+700,360);
+    }
     let y=top;
-    if(rows.length){c.fillStyle='#e8eefb';c.fillRect(0,y,W,56);c.fillStyle='#1b3f6b';c.font='bold 24px Arial,sans-serif';
-      c.fillText('Date',P,y+37);c.fillText('Details',P+200,y+37);c.textAlign='right';c.fillText('Amount',790,y+37);c.fillText('Balance',W-P,y+37);c.textAlign='left';y+=56}
+    if(rows.length){c.fillStyle='#e8eefb';c.fillRect(0,y,W,58);c.fillStyle='#1b3f6b';c.font='bold 24px Arial,sans-serif';
+      c.fillText('Date',P,y+38);c.fillText('Description',P+190,y+38);c.fillText('Type',P+590,y+38);c.textAlign='right';c.fillText('Amount',850,y+38);c.fillText('Balance',W-P,y+38);c.textAlign='left';y+=58}
     rows.forEach(({t,b},k)=>{
       if(k%2){c.fillStyle='#f6f8fc';c.fillRect(0,y,W,RH)}
       c.fillStyle='#14213a';c.font='24px Arial,sans-serif';c.fillText(fdate(t.date),P,y+44);
-      c.font='bold 27px Arial,sans-serif';c.fillText(fit(c,detail(t),400),P+200,y+32);
-      c.fillStyle='#5b6b85';c.font='20px Arial,sans-serif';c.fillText(fit(c,typeLabel(t)+(t.notes?' • '+t.notes:''),400),P+200,y+58);
-      c.textAlign='right';c.fillStyle='#14213a';c.font='bold 26px Arial,sans-serif';c.fillText((sgn(t)>0?'+':'−')+money(t.amount),790,y+44);
+      c.font='bold 25px Arial,sans-serif';c.fillText(fit(c,detail(t),370),P+190,y+38);
+      c.fillStyle='#5b6b85';c.font='19px Arial,sans-serif';c.fillText(fit(c,t.notes||'',370),P+190,y+66);
+      c.font='20px Arial,sans-serif';c.fillText(fit(c,typeLabel(t),230),P+590,y+48);
+      c.textAlign='right';c.fillStyle='#14213a';c.font='bold 24px Arial,sans-serif';c.fillText((sgn(t)>0?'+':'−')+money(t.amount),850,y+48);
       c.fillStyle=b>0?'#15803d':b<0?'#b91c1c':'#5b6b85';c.fillText((b<0?'−':'')+money(b),W-P,y+44);c.textAlign='left';y+=RH});
     if(last){
-      y+=30;const bh=d.lines.length*48+110;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,bh);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,bh);
-      let yy=y+46;c.font='26px Arial,sans-serif';
+      y+=24;const bh=d.lines.length*48+134;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,bh);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,bh);
+      let yy=y+42;c.font='24px Arial,sans-serif';
       d.lines.forEach(l=>{c.fillStyle='#14213a';c.textAlign='left';c.fillText(l[0],P+20,yy);c.textAlign='right';c.font='bold 26px Arial,sans-serif';c.fillText(money(l[1]),W-P-20,yy);c.font='26px Arial,sans-serif';yy+=48});
-      c.textAlign='left';c.font='bold 32px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,balText(d.net,a),W-2*P-40),P+20,yy+24);
+      c.textAlign='left';c.font='bold 29px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,'Remaining Balance: '+balText(d.net,a),W-2*P-40),P+20,yy+28);
     }
     c.fillStyle='#8a97ad';c.font='20px Arial,sans-serif';c.textAlign='center';c.fillText('Roommates Ledger  •  Personal record kept on one device',W/2,H-34);
     cv.toBlob(bl=>bl?res(bl):rej(new Error('Could not generate the statement image.')),'image/png');
   })));
 }
-async function png(){
-  const a=ui.acct;toast('Creating images…');
-  let blobs;try{blobs=await pngPages(a)}catch(e){alert(e.message||'Could not generate the statement image.');return}
-  const base=`ledger-${nm(me)}-${nm(a)}`.replace(/[^\w]+/g,'_');
-  const files=blobs.map((b,i)=>new File([b],`${base}_${i+1}.png`,{type:'image/png'}));
-  window._files=files;
-  modal(`<h2>Statement images</h2><p class="mut">${files.length>1?files.length+' pages created so the text stays readable.':'Ready to download or share.'}</p><div class="imgs">${files.map((f,i)=>`<img alt="Statement page ${i+1}" src="${URL.createObjectURL(f)}"><a class="btn" style="display:inline-block;text-decoration:none" download="${f.name}" href="${URL.createObjectURL(f)}">Download page ${i+1}</a>`).join('')}</div>
-  <div class="row" style="margin-top:12px"><button class="grow" data-a="shareImg">Share (WhatsApp, etc.)</button><button class="alt grow" data-a="close">Close</button></div>`);
+function fileBase(a,period){
+  return `roommates-ledger-${nm(a)}-${periodLabel(period)}`.normalize('NFKD').replace(/[^\w-]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
 }
-async function shareImg(){
-  const files=window._files||[];
-  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title:'Roommates Ledger statement'})}catch(e){if(e.name!=='AbortError')toast('Could not share the image. Download it and attach it in WhatsApp.')}}
-  else{toast('Sharing files is not supported here. Download the image, then attach it in WhatsApp.');waOpen(text('stmt'))}
+async function statementFiles(type,a=ui.acct,period='all'){
+  const blobs=await pngPages(a,period),base=fileBase(a,period);
+  if(type==='png')return blobs.map((b,i)=>new File([b],`${base}${blobs.length>1?`-${i+1}`:''}.png`,{type:'image/png'}));
+  const jpegPages=await Promise.all(blobs.map(blob=>new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(blob),img=new Image();
+    img.onload=()=>{
+      try{
+        const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+        const ctx=c.getContext('2d');if(!ctx)throw new Error('Canvas is unavailable.');
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0);
+        const data=c.toDataURL('image/jpeg',.94).split(',')[1],raw=atob(data),bytes=new Uint8Array(raw.length);
+        for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+        resolve({bytes,width:c.width,height:c.height});
+      }catch(e){reject(e)}finally{URL.revokeObjectURL(url)}
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not prepare a PDF statement page.'))};
+    img.src=url;
+  })));
+  const ascii=s=>new TextEncoder().encode(s),parts=[],offsets=[0];let length=0;
+  const add=bytes=>{parts.push(bytes);length+=bytes.length};
+  add(ascii('%PDF-1.4\n'));
+  const pageCount=jpegPages.length,objectCount=2+pageCount*3;
+  const objects=new Array(objectCount+1);
+  objects[1]=ascii('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  objects[2]=ascii(`2 0 obj\n<< /Type /Pages /Kids [${jpegPages.map((_,i)=>`${3+i*3} 0 R`).join(' ')}] /Count ${pageCount} >>\nendobj\n`);
+  jpegPages.forEach((p,i)=>{
+    const pageId=3+i*3,imageId=pageId+1,contentId=pageId+2;
+    const scale=Math.min(612/p.width,744/p.height),w=p.width*scale,h=p.height*scale,x=(612-w)/2,y=(792-h)/2;
+    const stream=ascii(`q\n${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm\n/Im0 Do\nQ\n`);
+    objects[pageId]=ascii(`${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im0 ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`);
+    objects[imageId]={prefix:ascii(`${imageId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${p.width} /Height ${p.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`),image:p.bytes,suffix:ascii('\nendstream\nendobj\n')};
+    objects[contentId]=ascii(`${contentId} 0 obj\n<< /Length ${stream.length} >>\nstream\n${new TextDecoder().decode(stream)}endstream\nendobj\n`);
+  });
+  for(let i=1;i<=objectCount;i++){
+    offsets[i]=length;
+    const obj=objects[i];
+    if(obj.prefix){add(obj.prefix);add(obj.image);add(obj.suffix)}else add(obj);
+  }
+  const xrefOffset=length;
+  add(ascii(`xref\n0 ${objectCount+1}\n0000000000 65535 f \n${offsets.slice(1).map(o=>`${String(o).padStart(10,'0')} 00000 n \n`).join('')}trailer\n<< /Size ${objectCount+1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`));
+  return [new File([new Blob(parts,{type:'application/pdf'})],`${fileBase(a,period)}.pdf`,{type:'application/pdf'})];
 }
-function text(w,id){
+function downloadFiles(files){
+  files.forEach((file,i)=>setTimeout(()=>{
+    const url=URL.createObjectURL(file),link=document.createElement('a');
+    link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  },i*350));
+}
+function shareFallback(files,type,period){
+  downloadFiles(files);
+  const isImage=type==='png',label=isImage?'image':'PDF';
+  modal(`<h2>${isImage?'Image':'PDF'} sharing unavailable</h2><p role="status">This browser/device cannot share ${label} files directly. The ${label} ${files.length>1?'pages are':'file is'} being downloaded. Attach ${files.length>1?'the downloaded pages':'the downloaded file'} in WhatsApp manually.</p>
+  <p class="mut">Statement for ${esc(nm(ui.acct))} · ${esc(periodLabel(period))}</p>
+  <div class="row"><button class="alt grow" data-a="wa" data-w="sum" data-period="${esc(period)}">Share account summary by WhatsApp</button></div>
+  <div class="imgs">${files.map(f=>`<a class="btn" style="display:inline-block;text-decoration:none;margin:4px" download="${esc(f.name)}" href="${URL.createObjectURL(f)}">Download ${esc(f.name)}</a>`).join('')}</div>
+  <div class="row" style="margin-top:12px"><button class="alt grow" data-a="close">Close</button></div>`);
+}
+async function exportAction(action){
+  const a=ui.acct,period=selectedPeriod(),type=action.includes('Pdf')?'pdf':'png';
+  try{
+    const files=await statementFiles(type,a,period);
+    if(action==='downloadPng'||action==='downloadPdf'){
+      downloadFiles(files);toast(`${type==='png'?'PNG image':'PDF statement'} downloaded.`);return;
+    }
+    if(action==='sharePng'||action==='sharePdf'){
+      let supported=false;
+      try{supported=typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files})}catch(e){supported=false}
+      if(!supported){shareFallback(files,type,period);return}
+      try{
+        await navigator.share({files,title:`Roommates Ledger — ${nm(a)} statement`,text:`${nm(a)} account statement (${periodLabel(period)})`});
+        toast('Share sheet opened. Select WhatsApp to send the statement.');
+      }catch(e){
+        if(e.name==='AbortError')return;
+        shareFallback(files,type,period);
+      }
+    }
+  }catch(e){alert(e.message||'Could not generate the account statement.')}
+}
+async function copySummary(){
+  const a=ui.acct,d=stData(a,selectedPeriod()),summary=`ROOMMATES LEDGER — ACCOUNT SUMMARY
+Ledger owner: ${nm(me)}
+Account holder: ${nm(a)}
+Statement period: ${d.period}
+Generated: ${fdate(today())}
+Total purchases / items: ${money(d.lines[0][1])}
+Total repayments / payments: ${money(d.lines[1][1])}
+Total amount charged to account: ${money(d.lines[2][1])}
+Total amount repaid to ledger owner: ${money(d.lines[3][1])}
+Current outstanding balance: ${balText(d.net,a)}`;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(summary);
+    else{
+      const field=document.createElement('textarea');field.value=summary;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();
+      const copied=document.execCommand('copy');field.remove();if(!copied)throw new Error('Clipboard access is unavailable.');
+    }
+    toast('Account summary copied.');
+  }catch(e){toast('Could not copy the summary. Check clipboard permissions and try again.')}
+}
+function text(w,id,period='all'){
   const a=ui.acct,n=net(a);
   if(w==='tx'){const t=S.txs.find(x=>x.id===id);return `*Roommates Ledger*\n${typeLabel(t)}\nFrom ledger of: ${nm(me)}\nAccount: ${nm(t.account)}\nDate: ${fdate(t.date)}\n${detail(t)}: ${money(t.amount)}${t.notes?'\nNote: '+t.notes:''}\n\nBalance now: ${balText(net(t.account),t.account)}`}
-  if(w==='sum')return `*Roommates Ledger — Summary*\nLedger of: ${nm(me)}\nAccount: ${nm(a)}\n${balText(n,a)}\nDate: ${fdate(today())}`;
-  const d=stData(a);
+  if(w==='sum'){const d=stData(a,period);return `*Roommates Ledger — Summary*\nLedger owner: ${nm(me)}\nAccount: ${nm(a)}\nStatement period: ${d.period}\nTotal purchases: ${money(d.lines[0][1])}\nTotal repayments: ${money(d.lines[1][1])}\n${balText(n,a)}\nDate: ${fdate(today())}`}
+  const d=stData(a,period);
   return `*Roommates Ledger — Statement*\nLedger of: ${nm(me)}\nAccount: ${nm(a)}\nDate: ${fdate(today())}\n\n`+d.rows.map(({t})=>`${fdate(t.date)} | ${detail(t)} | ${sgn(t)>0?'+':'−'}${money(t.amount)}`).join('\n')+'\n\n'+d.lines.map(l=>`${l[0]}: ${money(l[1])}`).join('\n')+`\n*${balText(n,a)}*`;
 }
 function waOpen(t){window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')}
@@ -317,6 +445,10 @@ function act(a,d){
     case 'nav':ui.view=d.v;render();break;
     case 'open':ui.acct=d.id;ui.view='acct';ui.range='all';ui.q='';render();break;
     case 'form':form(d.k,d.id,d.acct);break;
+    case 'exportPanel':exportPanel();break;
+    case 'downloadPng':case 'downloadPdf':case 'sharePng':case 'sharePdf':exportAction(a);break;
+    case 'copySummary':copySummary();break;
+    case 'printStatement':printStatement(ui.acct,selectedPeriod());break;
     case 'close':closeModal();break;
     case 'del':{const t=S.txs.find(x=>x.id===d.id);
       if(confirm(`Delete this ${t.kind==='item'?'item':'payment'} (${detail(t)}, ${money(t.amount)}, ${fdate(t.date)})? This cannot be undone.`)){S.txs=S.txs.filter(x=>x.id!==d.id);save();render();toast('Deleted')}break}
@@ -332,10 +464,10 @@ function act(a,d){
       if(d.id===me)return alert('Switch to another user before removing this profile.');
       if(S.roommates.length<=2)return alert('Keep at least two roommates.');
       if(confirm(`Remove ${nm(d.id)}?`)){S.roommates=S.roommates.filter(r=>r.id!==d.id);save();render()}break}
-    case 'pdf':pdf();break;
-    case 'png':png();break;
-    case 'shareImg':shareImg();break;
-    case 'wa':waOpen(text(d.w,d.id));break;
+    case 'pdf':printStatement(ui.acct,'all');break;
+    case 'png':exportAction('downloadPng');break;
+    case 'shareImg':exportAction('sharePng');break;
+    case 'wa':waOpen(text(d.w,d.id,d.period||'all'));break;
     case 'export':exportData();break;
     case 'import':$('#file').click();break;
   }
