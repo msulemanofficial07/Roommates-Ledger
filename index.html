@@ -360,7 +360,7 @@ async function exportAction(action){
       try{supported=typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files})}catch(e){supported=false}
       if(!supported){shareFallback(files,type,period);return}
       try{
-        await navigator.share({files,title:`Roommates Ledger — ${nm(a)} statement`,text:`${nm(a)} account statement (${periodLabel(period)})`});
+        await navigator.share({files,title:`Roommates Ledger — ${nm(a)} statement`});
         toast('Share sheet opened. Select WhatsApp to send the statement.');
       }catch(e){
         if(e.name==='AbortError')return;
