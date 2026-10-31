@@ -46,7 +46,9 @@ tr.click{cursor:pointer}tr.click:hover{background:#f6f9ff}
 .imgs img{width:100%;border:1px solid var(--line);border-radius:8px;margin:8px 0 4px}
 #printArea{display:none}
 @media print{body>*:not(#printArea){display:none!important}#printArea{display:block;color:#000}
-#printArea h1{color:#0f2a4a;margin:0 0 4px}#printArea table{font-size:13px}#printArea .box{border:1px solid #999;padding:10px;margin-top:12px}}
+#printArea h1{color:#0f2a4a;margin:0 0 4px}#printArea table{font-size:13px}#printArea thead{display:table-header-group}
+#printArea tr{break-inside:avoid;page-break-inside:avoid}#printArea .box{border:1px solid #999;padding:10px;margin-top:12px}
+@page{margin:14mm}}
 </style>
 </head>
 <body>
@@ -60,8 +62,9 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const iso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
 const today=()=>iso(new Date());
 const fdate=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-const money=p=>'Rs. '+(Math.abs(p)/100).toLocaleString('en-PK',{minimumFractionDigits:p%100?2:0,maximumFractionDigits:2});
-const toPaisa=v=>Math.round(parseFloat(v)*100);
+const money=p=>'Rs. '+(Math.abs(p)/100).toLocaleString('en-PK',{minimumFractionDigits:Math.abs(p)%100?2:0,maximumFractionDigits:2});
+const toPaisa=v=>{const n=Number(v);return Number.isFinite(n)?Math.round(n*100):NaN};
+const validDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(new Date(d+'T00:00:00').getTime())&&iso(new Date(d+'T00:00:00'))===d;
 
 let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||!Array.isArray(S.roommates)||!Array.isArray(S.txs)){S={roommates:['M. Suleman','M. Youaan','Shamshad','Ihsan'].map(n=>({id:uid(),name:n})),txs:[]};save()}
@@ -71,7 +74,7 @@ if(me&&!S.roommates.some(r=>r.id===me))me=null;
 if(!me){const ih=S.roommates.find(r=>r.name==='Ihsan');if(ih){me=ih.id;try{localStorage.setItem(UK,me)}catch(e){}}}
 let ui={view:'home',acct:null,range:'all',from:'',to:'',q:''};
 
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save data. Browser storage may be full or blocked.')}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){alert('Could not save data. Browser storage may be full or blocked. Export a backup and free browser storage before continuing.');return false}}
 const nm=id=>{const r=S.roommates.find(x=>x.id===id);return r?r.name:'Unknown'};
 const sgn=t=>((t.kind==='item')===(t.dir==='in'))?1:-1;
 const mine=a=>S.txs.filter(t=>t.owner===me&&t.account===a).sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.created-y.created);
@@ -162,7 +165,8 @@ function backup(){
 
 /* ---------- Forms ---------- */
 function form(kind,id,acctId){
-  const t=id?S.txs.find(x=>x.id===id):null;if(t)kind=t.kind;
+  const t=id?S.txs.find(x=>x.id===id&&x.owner===me):null;if(id&&!t)return toast('This transaction is not available in the current ledger.');
+  if(t)kind=t.kind;
   if(!others().length)return toast('Add another roommate first.');
   const it=kind==='item',sel=t?t.account:(acctId||ui.acct);
   const dirs=it?[['in','I provided it — they owe me'],['out','They provided it — I owe them']]:[['in','They paid me'],['out','I paid them']];
@@ -170,7 +174,7 @@ function form(kind,id,acctId){
   <label>Roommate<select name="account">${others().map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label>
   <label>${it?'Who provided it?':'Direction'}<select name="dir">${dirs.map(d=>`<option value="${d[0]}" ${t&&t.dir===d[0]?'selected':''}>${d[1]}</option>`).join('')}</select></label>
   ${it?`<label>Item name<input name="desc" required maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Roti"></label>`:`<label>Payment method (optional)<input name="method" maxlength="40" value="${esc(t?t.method:'')}" placeholder="Cash, JazzCash, Easypaisa…"></label>`}
-  <label>Amount (PKR)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" required value="${t?t.amount/100:''}"></label>
+  <label>Amount (PKR)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" max="999999999.99" required value="${t?t.amount/100:''}"></label>
   <label>Date<input name="date" type="date" required value="${t?t.date:today()}"></label>
   ${it?`<label>Quantity (optional)<input name="qty" maxlength="30" value="${esc(t?t.qty:'')}" placeholder="e.g. 4 pieces"></label>`:''}
   <label>Notes (optional)<textarea name="notes" rows="2" maxlength="300">${esc(t?t.notes:'')}</textarea></label>
@@ -180,19 +184,21 @@ document.addEventListener('submit',e=>{
   if(e.target.id!=='f')return;e.preventDefault();
   const f=e.target,v=Object.fromEntries(new FormData(f)),kind=f.dataset.kind,id=f.dataset.id;
   const amt=toPaisa(v.amount);
-  if(!(amt>0))return toast('Enter an amount greater than zero.');
+  if(!Number.isSafeInteger(amt)||amt<=0)return toast('Enter a valid amount greater than zero (up to Rs. 999,999,999.99).');
   if(v.account===me||!S.roommates.some(r=>r.id===v.account))return toast('Choose a different roommate.');
-  if(!v.date)return toast('Choose a date.');
+  if(!validDate(v.date))return toast('Choose a valid transaction date.');
+  if(!['item','payment'].includes(kind)||!['in','out'].includes(v.dir))return toast('Choose a valid transaction type and direction.');
   if(kind==='item'&&!v.desc.trim())return toast('Enter an item name.');
+  if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('This transaction is not available in the current ledger.');
   if(kind==='payment'){
     const n=net(v.account,id||null);
     if(v.dir==='in'){if(amt>Math.max(n,0))return toast(n>0?`They only owe you ${money(n)}. Payment is too high.`:'They owe you nothing right now.')}
     else if(amt>Math.max(-n,0))return toast(-n>0?`You only owe them ${money(-n)}. Payment is too high.`:'You owe them nothing right now.');
   }
   const now=Date.now(),data={account:v.account,dir:v.dir,amount:amt,date:v.date,notes:(v.notes||'').trim(),kind,desc:kind==='item'?v.desc.trim():'Payment',qty:(v.qty||'').trim(),method:(v.method||'').trim()};
-  if(id){Object.assign(S.txs.find(t=>t.id===id),data,{updated:now})}
+  if(id){Object.assign(S.txs.find(t=>t.id===id&&t.owner===me),data,{updated:now})}
   else S.txs.push(Object.assign({id:uid(),owner:me,created:now,updated:now},data));
-  save();closeModal();toast('Saved');render();
+  if(!save())return;closeModal();toast('Saved');render();
 });
 
 /* ---------- Statements ---------- */
@@ -200,7 +206,7 @@ function stData(a){return{rows:runRows(a),net:net(a),lines:sumLines(a)}}
 function pdf(){
   const a=ui.acct,d=stData(a);
   $('#printArea').innerHTML=`<h1>Roommates Ledger</h1><p><b>Account statement</b></p><p>Ledger owner: <b>${esc(nm(me))}</b><br>Account holder: <b>${esc(nm(a))}</b><br>Generated: ${fdate(today())}</p>
-  <table><tr><th>Date</th><th>Details</th><th>Type</th><th class="n">Amount</th><th class="n">Balance</th></tr>${d.rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td>${esc(detail(t))}${t.notes?'<br><i>'+esc(t.notes)+'</i>':''}</td><td>${typeLabel(t)}</td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n">${b<0?'−':''}${money(b)}</td></tr>`).join('')}</table>
+  <table><thead><tr><th>Date</th><th>Details</th><th>Type</th><th class="n">Amount</th><th class="n">Balance</th></tr></thead><tbody>${d.rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td>${esc(detail(t))}${t.notes?'<br><i>'+esc(t.notes)+'</i>':''}</td><td>${typeLabel(t)}</td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n">${b<0?'−':''}${money(b)}</td></tr>`).join('')}</tbody></table>
   <div class="box">${d.lines.map(l=>`${l[0]}: <b>${money(l[1])}</b>`).join('<br>')}<br><br><b style="font-size:18px">Remaining balance: ${balText(d.net)}</b></div>
   <p style="font-size:12px;margin-top:14px">Generated by Roommates Ledger. This is a personal record kept on one device.</p>`;
   toast('Choose "Save as PDF" in the print dialog');setTimeout(()=>window.print(),300);
@@ -212,9 +218,9 @@ function pngPages(a){
   if(!chunks.length)chunks.push([]);
   if(chunks[chunks.length-1].length>8)chunks.push([]);
   const sumH=60+d.lines.length*48+110;
-  return Promise.all(chunks.map((rows,i)=>new Promise(res=>{
+  return Promise.all(chunks.map((rows,i)=>new Promise((res,rej)=>{
     const last=i===chunks.length-1,top=310,H=top+(rows.length?56:0)+rows.length*RH+(last?sumH:0)+90;
-    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');if(!c)return rej(new Error('Canvas is unavailable.'));
     c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,170);
     c.fillStyle='#fff';c.font='bold 54px Arial,sans-serif';c.fillText('Roommates Ledger',P,88);
     c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('Account statement'+(chunks.length>1?`  •  Page ${i+1} of ${chunks.length}`:''),P,132);
@@ -238,12 +244,13 @@ function pngPages(a){
       c.textAlign='left';c.font='bold 32px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,balText(d.net),W-2*P-40),P+20,yy+24);
     }
     c.fillStyle='#8a97ad';c.font='20px Arial,sans-serif';c.textAlign='center';c.fillText('Roommates Ledger  •  Personal record kept on one device',W/2,H-34);
-    cv.toBlob(bl=>res(bl),'image/png');
+    cv.toBlob(bl=>bl?res(bl):rej(new Error('Could not generate the statement image.')),'image/png');
   })));
 }
 async function png(){
   const a=ui.acct;toast('Creating images…');
-  const blobs=await pngPages(a);const base=`ledger-${nm(me)}-${nm(a)}`.replace(/[^\w]+/g,'_');
+  let blobs;try{blobs=await pngPages(a)}catch(e){alert(e.message||'Could not generate the statement image.');return}
+  const base=`ledger-${nm(me)}-${nm(a)}`.replace(/[^\w]+/g,'_');
   const files=blobs.map((b,i)=>new File([b],`${base}_${i+1}.png`,{type:'image/png'}));
   window._files=files;
   modal(`<h2>Statement images</h2><p class="mut">${files.length>1?files.length+' pages created so the text stays readable.':'Ready to download or share.'}</p><div class="imgs">${files.map((f,i)=>`<img alt="Statement page ${i+1}" src="${URL.createObjectURL(f)}"><a class="btn" style="display:inline-block;text-decoration:none" download="${f.name}" href="${URL.createObjectURL(f)}">Download page ${i+1}</a>`).join('')}</div>
@@ -251,7 +258,7 @@ async function png(){
 }
 async function shareImg(){
   const files=window._files||[];
-  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title:'Roommates Ledger statement'})}catch(e){}}
+  if(navigator.canShare&&navigator.canShare({files})){try{await navigator.share({files,title:'Roommates Ledger statement'})}catch(e){if(e.name!=='AbortError')toast('Could not share the image. Download it and attach it in WhatsApp.')}}
   else{toast('Sharing files is not supported here. Download the image, then attach it in WhatsApp.');waOpen(text('stmt'))}
 }
 function text(w,id){
@@ -268,15 +275,39 @@ function exportData(){
   const b=new Blob([JSON.stringify({app:'roommates-ledger',version:1,exported:new Date().toISOString(),roommates:S.roommates,txs:S.txs},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`roommates-ledger-backup-${today()}.json`;a.click();toast('Backup downloaded');
 }
+function validBackup(d){
+  if(!d||d.app!=='roommates-ledger'||d.version!==1||!Array.isArray(d.roommates)||!Array.isArray(d.txs)||!d.roommates.length)return false;
+  const ids=new Set(),names=new Set();
+  for(const r of d.roommates){
+    if(!r||typeof r.id!=='string'||!r.id.trim()||typeof r.name!=='string'||!r.name.trim()||r.name.length>40||ids.has(r.id)||names.has(r.name.trim().toLowerCase()))return false;
+    ids.add(r.id);names.add(r.name.trim().toLowerCase());
+  }
+  const txIds=new Set();
+  return d.txs.every(t=>{
+    if(!t||typeof t.id!=='string'||!t.id.trim()||txIds.has(t.id)||!ids.has(t.owner)||!ids.has(t.account)||t.owner===t.account||
+      !['item','payment'].includes(t.kind)||!['in','out'].includes(t.dir)||!Number.isSafeInteger(t.amount)||t.amount<=0||!validDate(t.date))return false;
+    if(t.kind==='item'&&(typeof t.desc!=='string'||!t.desc.trim()||t.desc.length>80))return false;
+    if(t.kind==='payment'&&t.desc!=='Payment')return false;
+    if(t.notes!=null&&(typeof t.notes!=='string'||t.notes.length>300))return false;
+    if(t.qty!=null&&(typeof t.qty!=='string'||t.qty.length>30))return false;
+    if(t.method!=null&&(typeof t.method!=='string'||t.method.length>40))return false;
+    txIds.add(t.id);return true;
+  });
+}
 function importData(file){
-  const r=new FileReader();r.onload=()=>{
+  const r=new FileReader();r.onerror=()=>alert('Could not read the selected backup file.');
+  r.onload=()=>{
     try{
       const d=JSON.parse(r.result);
-      if(!Array.isArray(d.roommates)||!Array.isArray(d.txs)||!d.roommates.every(x=>x.id&&x.name)||!d.txs.every(t=>t.id&&t.owner&&t.account&&Number.isInteger(t.amount)&&t.date))throw 0;
+      if(!validBackup(d))throw new Error('The backup contains invalid or inconsistent roommate or transaction records.');
       if(!confirm(`Replace ALL data on this device with this backup (${d.roommates.length} roommates, ${d.txs.length} transactions)?`))return;
-      S={roommates:d.roommates,txs:d.txs};save();if(!S.roommates.some(x=>x.id===me)){me=null;localStorage.removeItem(UK)}
-      ui.view='home';render();toast('Backup restored');
-    }catch(e){alert('This file is not a valid Roommates Ledger backup.')}
+      const previous=S;S={roommates:d.roommates,txs:d.txs};
+      if(!save()){S=previous;return}
+      if(!S.roommates.some(x=>x.id===me)){const ih=S.roommates.find(x=>x.name==='Ihsan');me=ih?ih.id:null}
+      if(me){try{localStorage.setItem(UK,me)}catch(e){alert('Backup was restored, but the selected ledger owner could not be remembered on this device.')}}
+      else{try{localStorage.removeItem(UK)}catch(e){alert('Backup was restored, but the saved ledger owner could not be cleared.')}}
+      ui.view='home';ui.acct=null;ui.q='';render();toast('Backup restored');
+    }catch(e){alert(e.message==='The backup contains invalid or inconsistent roommate or transaction records.'?e.message:'This file is not a valid Roommates Ledger backup.')}
   };r.readAsText(file);
 }
 function act(a,d){
