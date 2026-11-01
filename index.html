@@ -75,11 +75,14 @@ const toPaisa=v=>{const n=Number(v);return Number.isFinite(n)?Math.round(n*100):
 const validDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(new Date(d+'T00:00:00').getTime())&&iso(new Date(d+'T00:00:00'))===d;
 
 let S=null;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!S||!Array.isArray(S.roommates)||!Array.isArray(S.txs)){S={roommates:['M. Suleman','M. Youaan','Shamshad','Ihsan'].map(n=>({id:uid(),name:n})),txs:[]};save()}
+if(!S||!Array.isArray(S.roommates)||!Array.isArray(S.txs)){S={roommates:['M. Suleman','M. Youaan','Shamshad','Ihsan Ullah'].map(n=>({id:uid(),name:n})),txs:[]};save()}
+let renamedDefaultUser=false;
+for(const roommate of S.roommates)if(roommate.name==='Ihsan'){roommate.name='Ihsan Ullah';renamedDefaultUser=true}
+if(renamedDefaultUser)save();
 let me=null;try{me=localStorage.getItem(UK)}catch(e){}
 if(me&&!S.roommates.some(r=>r.id===me))me=null;
-// Ihsan is the default ledger owner on first open
-if(!me){const ih=S.roommates.find(r=>r.name==='Ihsan');if(ih){me=ih.id;try{localStorage.setItem(UK,me)}catch(e){}}}
+// Ihsan Ullah is the default ledger owner on first open.
+if(!me){const ih=S.roommates.find(r=>r.name==='Ihsan Ullah');if(ih){me=ih.id;try{localStorage.setItem(UK,me)}catch(e){}}}
 let ui={view:'home',acct:null};
 let backPressedAt=0;
 
