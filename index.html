@@ -31,6 +31,7 @@ button,.btn{font:inherit;font-weight:650;border:1px solid var(--navy);background
 button:hover:not(:disabled){filter:brightness(1.04);box-shadow:0 3px 10px #245fc026}
 button:active:not(:disabled){transform:translateY(1px)}
 button.alt{background:#fff;color:var(--navy);border-color:#718096}button.warn{background:#fff;color:var(--red);border-color:#c13e48}
+button.whatsapp{background:#128c4a;color:#fff;border-color:#0b6f3a}
 button:disabled{opacity:.48;cursor:not-allowed}
 button.sm{padding:6px 10px;min-height:36px;font-size:13px}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #90b8f5;outline-offset:2px}
@@ -169,7 +170,7 @@ function acct(){
   <div class="grid advance-stats"><div class="stat advance-stat"><small>Advance payment</small><b>${money(advance.total)}</b></div><div class="stat advance-stat"><small>Spent</small><b>${money(advance.spent)}</b></div><div class="stat advance-stat"><small>Advance remaining</small><b>${money(advance.remaining)}</b></div></div>
   <div class="card account-balance"><div class="mut">${n>0?'Owed to you':n<0?'Advance left':'All paid'}</div><div class="balance-value ${n<0?'pos':balCls(n)}" style="font-size:22px;direction:ltr;text-align:left;font-weight:700">${money(Math.abs(n))}</div></div>
   ${entryActions(a)}
-  <button class="alt" style="width:100%" data-a="shareAccount">Share image on WhatsApp</button>
+  <button class="whatsapp" style="width:100%" data-a="shareAccount">Share image on WhatsApp</button>
   <h3>Recent activity</h3><div id="list"></div>`;
 }
 function renderList(){
