@@ -29,6 +29,7 @@ h2{font-size:19px;line-height:1.3;margin:2px 0 6px}h3{font-size:16px;margin:14px
 .stat-button .stat-status{margin-top:3px}
 button,.btn{font:inherit;font-weight:650;border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;min-height:42px}
 button.alt{background:#fff;color:var(--blue)}button.warn{background:#fff;color:var(--red);border-color:#e4b7b7}
+button:disabled{opacity:.48;cursor:not-allowed}
 button.sm{padding:6px 10px;min-height:36px;font-size:13px}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #90b8f5;outline-offset:2px}
 .profiles{display:grid;gap:12px;grid-template-columns:1fr}
@@ -96,23 +97,31 @@ const sgn=t=>((t.kind==='item')===(t.dir==='in'))?1:-1;
 const mine=a=>S.txs.filter(t=>t.owner===me&&t.account===a).sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.created-y.created);
 const net=(a,ex)=>mine(a).filter(t=>t.id!==ex).reduce((s,t)=>s+sgn(t)*t.amount,0);
 function advanceSummary(a){
-  let total=0,spent=0,remaining=0;
+  let total=0,spent=0,remaining=0,balance=0;
   for(const t of mine(a)){
-    if(t.kind==='payment'&&(t.paymentMode||t.paymentType)==='advance'&&t.dir==='in'){
-      total+=t.amount;remaining+=t.amount;
+    if(t.kind==='payment'&&t.dir==='in'){
+      if((t.paymentMode||t.paymentType)==='advance'){
+        total+=t.amount;remaining+=t.amount;
+      }else{
+        const excess=Math.max(0,t.amount-Math.max(0,balance));
+        total+=excess;remaining+=excess;
+      }
     }else if(t.kind==='item'&&t.dir==='in'&&remaining>0){
       const applied=Math.min(t.amount,remaining);spent+=applied;remaining-=applied;
     }
+    balance+=sgn(t)*t.amount;
   }
   return{total,spent,remaining};
 }
+const hasPaymentDue=a=>net(a)>0;
 const others=()=>S.roommates.filter(r=>r.id!==me);
 function balText(n,a){return n>0?`${nm(a)} owes you ${money(n)}`:n<0?`You owe ${nm(a)} ${money(-n)}`:'All paid'}
 function balCls(n){return n>0?'pos':n<0?'neg':'mut'}
 function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):(t.paymentMode||t.paymentType)==='advance'?'Advance received':t.dir==='in'?'Payment received':'Payment made'}
 function entryActions(acctId,expenseDir='in'){
   const context=acctId?` data-acct="${esc(acctId)}"`:'';
-  return `<div class="actions entry-actions"><button data-a="form" data-k="item"${context} data-dir="${expenseDir}">Add Expense</button><button class="alt" data-a="form" data-k="payment" data-mode="payment"${context}>Add Payment</button><button class="alt" data-a="form" data-k="payment" data-mode="advance"${context}>Add Advance Payment</button></div>`;
+  const canPay=acctId?hasPaymentDue(acctId):others().some(r=>hasPaymentDue(r.id));
+  return `<div class="actions entry-actions"><button data-a="form" data-k="item"${context} data-dir="${expenseDir}">Add Expense</button><button class="alt" data-a="form" data-k="payment" data-mode="payment"${context}${canPay?'':' disabled title="Add an expense first."'}>Add Payment</button><button class="alt" data-a="form" data-k="payment" data-mode="advance"${context}>Add Advance Payment</button></div>`;
 }
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
 function modal(h){closeModal();const o=document.createElement('div');o.className='ov';o.id='modal';o.innerHTML='<div class="sheet">'+h+'</div>';o.addEventListener('mousedown',e=>{if(e.target===o)closeModal()});document.body.appendChild(o)}
@@ -183,12 +192,13 @@ function form(kind,id,acctId,expenseDir,paymentMode){
   const mode=t?(t.paymentMode||t.paymentType||'payment'):(paymentMode||'payment');
   const dir=t?t.dir:(it?(expenseDir||'in'):'in');
   const checkedAccounts=t?[t.account]:sel?[sel]:[];
-  modal(`<h2>${t?'Edit entry':it?(dir==='out'?'Record purchase for you':'Add expense'):mode==='advance'?'Add Advance Payment':'Add Payment'}</h2><p class="intro">${it?(dir==='out'?'Select who bought for you. The amount is recorded for each selected roommate.':'Select who this expense was for. The amount is recorded for each selected roommate. Any advance from them is reduced automatically.'):mode==='advance'?'Record an advance received from a roommate. Their future expenses will reduce this balance.':'Record a payment received from a roommate to reduce what they owe.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}" data-dir="${dir}" data-payment-mode="${mode}">
-  <fieldset class="room-choice"><legend>${it?'Who was it for?':'Roommates'}</legend>${t?`<input type="hidden" name="accounts" value="${esc(t.account)}"><div class="mut">${esc(nm(t.account))}</div>`:others().map(r=>`<label class="check-row"><input type="checkbox" name="accounts" value="${r.id}" ${checkedAccounts.includes(r.id)?'checked':''}><span>${esc(r.name)} <small>Balance: ${money(net(r.id))}</small></span></label>`).join('')}
+  if(kind==='payment'&&mode==='payment'&&!t&&!others().some(r=>hasPaymentDue(r.id)))return toast('Add an expense before recording a payment.');
+  modal(`<h2>${t?'Edit entry':it?(dir==='out'?'Record purchase for you':'Add expense'):mode==='advance'?'Add Advance Payment':'Add Payment'}</h2><p class="intro">${it?(dir==='out'?'Select who bought for you. The amount is recorded for each selected roommate.':'Select who this expense was for. The amount is recorded for each selected roommate. Any advance from them is reduced automatically.'):mode==='advance'?'Record an advance received from a roommate. Their future expenses will reduce this balance.':'Select a roommate with an unpaid expense. If the payment is more than they owe, the extra is added to their advance automatically.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}" data-dir="${dir}" data-payment-mode="${mode}">
+  <fieldset class="room-choice"><legend>${it?'Who was it for?':'Roommates'}</legend>${t?`<input type="hidden" name="accounts" value="${esc(t.account)}"><div class="mut">${esc(nm(t.account))}</div>`:others().map(r=>{const eligible=kind!=='payment'||mode!=='payment'||hasPaymentDue(r.id);return `<label class="check-row"><input type="checkbox" name="accounts" value="${r.id}" ${checkedAccounts.includes(r.id)?'checked':''} ${eligible?'':'disabled'}><span>${esc(r.name)} <small>Balance: ${money(net(r.id))}</small></span></label>`}).join('')}
   </fieldset>
   ${it?`<label>What was it for? (optional)<input name="desc" maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Groceries"></label>`:''}
   <label>Amount (Rs.)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" max="999999999.99" required value="${t?t.amount/100:''}" placeholder="e.g. 500"></label>
-  ${!it?`<p class="mut">Payment date and time will be added automatically.</p>`:''}
+  ${!it?`<p class="mut">${mode==='payment'?'Payment date and time will be added automatically.':'Advance date and time will be added automatically.'}</p>`:''}
   <input type="hidden" name="date" value="${t?t.date:today()}">
   ${it?`<input type="hidden" name="qty" value="${esc(t?t.qty:'')}"><input type="hidden" name="notes" value="${esc(t?t.notes:'')}">`:''}
   <div class="actions"><button type="submit">Save</button><button class="alt" type="button" data-a="close">Cancel</button></div></form>`);
@@ -203,6 +213,7 @@ document.addEventListener('submit',e=>{
   if(accounts.some(account=>account===me||!S.roommates.some(r=>r.id===account)))return toast('Choose valid roommates.');
   if(kind==='item'&&!['in','out'].includes(f.dataset.dir))return toast('Choose a valid expense type.');
   if(kind==='payment'&&!['payment','advance'].includes(paymentMode))return toast('Could not identify this payment action. Close and try again.');
+  if(kind==='payment'&&paymentMode==='payment'&&accounts.some(account=>net(account,id||undefined)<=0))return toast('Add an expense for the selected roommate before recording a payment.');
   if(kind==='item'&&!validDate(v.date))return toast('The date is invalid.');
   if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('This entry is not available.');
   const now=Date.now(),dir=kind==='item'?f.dataset.dir:(id?S.txs.find(t=>t.id===id&&t.owner===me).dir:'in');
