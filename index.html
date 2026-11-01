@@ -42,6 +42,9 @@ label{display:block;font-weight:650;margin:10px 0 0;font-size:14px}
 input,select,textarea{width:100%;font:inherit;padding:9px;border:1px solid #aebdd0;border-radius:8px;margin-top:4px;background:#fff;color:var(--ink)}
 input[type=number],input[type=date]{direction:ltr;text-align:left}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:0 0 auto}.grow{flex:1 1 180px!important}
+.roommate-row{flex-wrap:nowrap;gap:4px}
+.roommate-row>.grow{flex:1 1 0!important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.roommate-row>button.sm{padding:4px 6px;min-height:32px;font-size:11px;white-space:nowrap}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .entry-actions button:last-child{grid-column:1/-1}
 .room-choice{border:1px solid var(--line);border-radius:9px;padding:8px;margin:10px 0}
@@ -178,7 +181,7 @@ function renderList(){
   $('#list').innerHTML=rows.length?rows.map(({t,b})=>`<div class="tx-card"><div class="tx-top"><b>${esc(detail(t))}</b><span class="tx-amount ${sgn(t)>0?'pos':'neg'}">${sgn(t)>0?'+':'−'}${money(t.amount)}</span></div><div class="tx-meta">${fdate(t.date)}${t.kind==='payment'?' · '+ftime(t.created):''} · Balance ${b<0?'−':''}${money(b)}</div><div class="tx-actions"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button><button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></div></div>`).join(''):'<p class="mut">No entries yet. Add an expense to get started.</p>';
 }
 function mates(){
-  return `<h2>Roommates</h2><p class="intro">Open a roommate ledger or manage names.</p>${entryActions()}<div class="card">${S.roommates.map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b>${r.id!==me?`<button class="alt sm" data-a="open" data-id="${r.id}">Open</button>`:''}<button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
+  return `<h2>Roommates</h2><p class="intro">Open a roommate ledger or manage names.</p>${entryActions()}<div class="card">${S.roommates.map(r=>`<div class="row roommate-row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow" title="${esc(r.name)}">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b>${r.id!==me?`<button class="alt sm" data-a="open" data-id="${r.id}">Open</button>`:''}<button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
   <label for="newName">Add a roommate</label><div class="row" style="margin-top:6px"><input class="grow" id="newName" placeholder="Name"><button data-a="add">Add</button></div></div>`;
 }
 function historyView(){
