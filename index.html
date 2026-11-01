@@ -91,7 +91,7 @@ const net=(a,ex)=>mine(a).filter(t=>t.id!==ex).reduce((s,t)=>s+sgn(t)*t.amount,0
 const others=()=>S.roommates.filter(r=>r.id!==me);
 function balText(n,a){return n>0?`${nm(a)} owes you ${money(n)}`:n<0?`You owe ${nm(a)} ${money(-n)}`:'All paid'}
 function balCls(n){return n>0?'pos':n<0?'neg':'mut'}
-function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):t.paymentType==='advance'?'Advance received':t.dir==='in'?'Payment received':'Payment made'}
+function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):(t.paymentMode||t.paymentType)==='advance'?'Advance received':t.dir==='in'?'Payment received':'Payment made'}
 function entryActions(acctId,expenseDir='in'){
   const context=acctId?` data-acct="${esc(acctId)}"`:'';
   return `<div class="actions entry-actions"><button data-a="form" data-k="item"${context} data-dir="${expenseDir}">Add Expense</button><button class="alt" data-a="form" data-k="payment" data-mode="payment"${context}>Add Payment</button><button class="alt" data-a="form" data-k="payment" data-mode="advance"${context}>Add Advance Payment</button></div>`;
@@ -160,10 +160,10 @@ function form(kind,id,acctId,expenseDir,paymentMode){
   if(t)kind=t.kind;
   if(!others().length)return toast('Add a roommate first.');
   const it=kind==='item',sel=t?t.account:(acctId||(ui.view==='acct'?ui.acct:null));
-  const mode=t?(t.paymentType||'payment'):(paymentMode||'payment');
+  const mode=t?(t.paymentMode||t.paymentType||'payment'):(paymentMode||'payment');
   const dir=t?t.dir:(it?(expenseDir||'in'):'in');
   const checkedAccounts=t?[t.account]:sel?[sel]:[];
-  modal(`<h2>${t?'Edit entry':it?(dir==='out'?'Record purchase for you':'Add expense'):mode==='advance'?'Add Advance Payment':'Add Payment'}</h2><p class="intro">${it?(dir==='out'?'Select who bought for you. The amount is recorded for each selected roommate.':'Select who this expense was for. The amount is recorded for each selected roommate. Any advance from them is reduced automatically.'):mode==='advance'?'Record an advance received from a roommate. Their future expenses will reduce this balance.':'Record a payment received from a roommate to reduce what they owe.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}" data-dir="${dir}" data-payment-type="${mode}">
+  modal(`<h2>${t?'Edit entry':it?(dir==='out'?'Record purchase for you':'Add expense'):mode==='advance'?'Add Advance Payment':'Add Payment'}</h2><p class="intro">${it?(dir==='out'?'Select who bought for you. The amount is recorded for each selected roommate.':'Select who this expense was for. The amount is recorded for each selected roommate. Any advance from them is reduced automatically.'):mode==='advance'?'Record an advance received from a roommate. Their future expenses will reduce this balance.':'Record a payment received from a roommate to reduce what they owe.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}" data-dir="${dir}" data-payment-mode="${mode}">
   <fieldset class="room-choice"><legend>${it?'Who was it for?':'Roommates'}</legend>${t?`<input type="hidden" name="accounts" value="${esc(t.account)}"><div class="mut">${esc(nm(t.account))}</div>`:others().map(r=>`<label class="check-row"><input type="checkbox" name="accounts" value="${r.id}" ${checkedAccounts.includes(r.id)?'checked':''}><span>${esc(r.name)} <small>Balance: ${money(net(r.id))}</small></span></label>`).join('')}
   </fieldset>
   ${it?`<label>What was it for? (optional)<input name="desc" maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Groceries"></label>`:''}
@@ -175,19 +175,19 @@ function form(kind,id,acctId,expenseDir,paymentMode){
 }
 document.addEventListener('submit',e=>{
   if(e.target.id!=='f')return;e.preventDefault();
-  const f=e.target,fd=new FormData(f),v=Object.fromEntries(fd),kind=f.dataset.kind,id=f.dataset.id,paymentType=f.dataset.paymentType;
+  const f=e.target,fd=new FormData(f),v=Object.fromEntries(fd),kind=f.dataset.kind,id=f.dataset.id,paymentMode=f.dataset.paymentMode;
   const accounts=fd.getAll('accounts').map(String);
   const amt=toPaisa(v.amount);
   if(!Number.isSafeInteger(amt)||amt<=0)return toast('Enter a valid amount greater than zero.');
   if(!accounts.length)return toast('Select at least one roommate.');
   if(accounts.some(account=>account===me||!S.roommates.some(r=>r.id===account)))return toast('Choose valid roommates.');
   if(kind==='item'&&!['in','out'].includes(f.dataset.dir))return toast('Choose a valid expense type.');
-  if(kind==='payment'&&!['payment','advance'].includes(paymentType))return toast('Choose a valid payment type.');
+  if(kind==='payment'&&!['payment','advance'].includes(paymentMode))return toast('Could not identify this payment action. Close and try again.');
   if(kind==='item'&&!validDate(v.date))return toast('The date is invalid.');
   if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('This entry is not available.');
   const now=Date.now(),dir=kind==='item'?f.dataset.dir:(id?S.txs.find(t=>t.id===id&&t.owner===me).dir:'in');
-  if(id){const existing=S.txs.find(t=>t.id===id&&t.owner===me);Object.assign(existing,{account:accounts[0],dir,amount:amt,date:kind==='payment'?today():v.date,created:kind==='payment'?now:existing.created,notes:'',kind,paymentType:kind==='payment'?paymentType:undefined,desc:kind==='item'?(v.desc||'').trim()||'Expense':'Payment',qty:(v.qty||'').trim(),method:'',updated:now})}
-  else accounts.forEach(account=>S.txs.push({id:uid(),owner:me,created:now,updated:now,account,dir,amount:amt,date:kind==='payment'?today():v.date,notes:'',kind,paymentType:kind==='payment'?paymentType:undefined,desc:kind==='item'?(v.desc||'').trim()||'Expense':paymentType==='advance'?'Advance payment':'Payment',qty:(v.qty||'').trim(),method:''}));
+  if(id){const existing=S.txs.find(t=>t.id===id&&t.owner===me);Object.assign(existing,{account:accounts[0],dir,amount:amt,date:kind==='payment'?today():v.date,created:kind==='payment'?now:existing.created,notes:'',kind,paymentMode:kind==='payment'?paymentMode:undefined,desc:kind==='item'?(v.desc||'').trim()||'Expense':'Payment',qty:(v.qty||'').trim(),method:'',updated:now})}
+  else accounts.forEach(account=>S.txs.push({id:uid(),owner:me,created:now,updated:now,account,dir,amount:amt,date:kind==='payment'?today():v.date,notes:'',kind,paymentMode:kind==='payment'?paymentMode:undefined,desc:kind==='item'?(v.desc||'').trim()||'Expense':paymentMode==='advance'?'Advance payment':'Payment',qty:(v.qty||'').trim(),method:''}));
   if(!save())return;closeModal();toast('Saved.');render();
 });
 
