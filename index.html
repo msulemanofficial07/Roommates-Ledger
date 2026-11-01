@@ -144,11 +144,11 @@ function form(kind,id,acctId,expenseDir){
   const it=kind==='item',sel=t?t.account:(acctId||(ui.view==='acct'?ui.acct:null));
   const dir=t?t.dir:(expenseDir||'in');
   const checkedAccounts=t?[t.account]:sel?[sel]:[];
-  modal(`<h2>${t?'Edit entry':it?(dir==='out'?'Record purchase for you':'Add expense'):'Add payment'}</h2><p class="intro">${it?(dir==='out'?'Enter what they bought for you.':'Enter an expense you paid for a roommate.'):'Select one or more roommates. The amount is applied to each selected roommate.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}" data-dir="${dir}">
-  ${it?`<label>Roommate<select name="account" required>${others().map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label>
-  <label>What was it for? (optional)<input name="desc" maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Groceries"></label>`:''}
-  ${!it?`<fieldset class="room-choice"><legend>Roommates</legend>${t?`<input type="hidden" name="accounts" value="${esc(t.account)}"><div class="mut">${esc(nm(t.account))}</div>`:others().map(r=>`<label class="check-row"><input type="checkbox" name="accounts" value="${r.id}" ${checkedAccounts.includes(r.id)?'checked':''}><span>${esc(r.name)} <small>Balance: ${money(net(r.id))}</small></span></label>`).join('')}
-  <label>Payment type<select name="paymentDirection"><option value="in" ${!t||t.dir==='in'?'selected':''}>Received from roommate (advance or repayment)</option><option value="out" ${t&&t.dir==='out'?'selected':''}>Paid to roommate</option></select></label>`:''}
+  modal(`<h2>${t?'Edit entry':it?(dir==='out'?'Record purchase for you':'Add expense'):'Add payment'}</h2><p class="intro">${it?(dir==='out'?'Select who bought for you. The amount is recorded for each selected roommate.':'Select who this expense was for. The amount is recorded for each selected roommate.'):'Select one or more roommates. The amount is applied to each selected roommate.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}" data-dir="${dir}">
+  <fieldset class="room-choice"><legend>${it?'Who was it for?':'Roommates'}</legend>${t?`<input type="hidden" name="accounts" value="${esc(t.account)}"><div class="mut">${esc(nm(t.account))}</div>`:others().map(r=>`<label class="check-row"><input type="checkbox" name="accounts" value="${r.id}" ${checkedAccounts.includes(r.id)?'checked':''}><span>${esc(r.name)} <small>Balance: ${money(net(r.id))}</small></span></label>`).join('')}
+  ${!it?`<label>Payment type<select name="paymentDirection"><option value="in" ${!t||t.dir==='in'?'selected':''}>Received from roommate (advance or repayment)</option><option value="out" ${t&&t.dir==='out'?'selected':''}>Paid to roommate</option></select></label>`:''}
+  </fieldset>
+  ${it?`<label>What was it for? (optional)<input name="desc" maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Groceries"></label>`:''}
   <label>Amount (Rs.)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" max="999999999.99" required value="${t?t.amount/100:''}" placeholder="e.g. 500"></label>
   ${!it?`<p class="mut">Payment date and time will be added automatically.</p>`:''}
   <input type="hidden" name="date" value="${t?t.date:today()}">
@@ -158,7 +158,7 @@ function form(kind,id,acctId,expenseDir){
 document.addEventListener('submit',e=>{
   if(e.target.id!=='f')return;e.preventDefault();
   const f=e.target,fd=new FormData(f),v=Object.fromEntries(fd),kind=f.dataset.kind,id=f.dataset.id;
-  const accounts=kind==='payment'?fd.getAll('accounts').map(String):[v.account];
+  const accounts=fd.getAll('accounts').map(String);
   const amt=toPaisa(v.amount);
   if(!Number.isSafeInteger(amt)||amt<=0)return toast('Enter a valid amount greater than zero.');
   if(!accounts.length)return toast('Select at least one roommate.');
