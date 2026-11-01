@@ -88,6 +88,17 @@ const nm=id=>{const r=S.roommates.find(x=>x.id===id);return r?r.name:'Unknown'};
 const sgn=t=>((t.kind==='item')===(t.dir==='in'))?1:-1;
 const mine=a=>S.txs.filter(t=>t.owner===me&&t.account===a).sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.created-y.created);
 const net=(a,ex)=>mine(a).filter(t=>t.id!==ex).reduce((s,t)=>s+sgn(t)*t.amount,0);
+function advanceSummary(a){
+  let total=0,spent=0,remaining=0;
+  for(const t of mine(a)){
+    if(t.kind==='payment'&&(t.paymentMode||t.paymentType)==='advance'&&t.dir==='in'){
+      total+=t.amount;remaining+=t.amount;
+    }else if(t.kind==='item'&&t.dir==='in'&&remaining>0){
+      const applied=Math.min(t.amount,remaining);spent+=applied;remaining-=applied;
+    }
+  }
+  return{total,spent,remaining};
+}
 const others=()=>S.roommates.filter(r=>r.id!==me);
 function balText(n,a){return n>0?`${nm(a)} owes you ${money(n)}`:n<0?`You owe ${nm(a)} ${money(-n)}`:'All paid'}
 function balCls(n){return n>0?'pos':n<0?'neg':'mut'}
@@ -133,7 +144,9 @@ function home(){
 function runRows(a){let b=0;return mine(a).map(t=>{b+=sgn(t)*t.amount;return{t,b}})}
 function acct(){
   const a=ui.acct,n=net(a);
+  const advance=advanceSummary(a);
   return `<button class="alt sm" data-a="nav" data-v="home">← Dashboard</button><h2 style="margin-top:10px">${esc(nm(a))}</h2>
+  <div class="grid"><div class="stat"><small>Advance payment</small><b>${money(advance.total)}</b></div><div class="stat"><small>Spent / advance</small><b>${money(advance.spent)} / ${money(advance.total)}</b></div><div class="stat"><small>Advance remaining</small><b>${money(advance.remaining)}</b></div></div>
   <div class="card"><div class="mut">${n>0?'Owed to you':n<0?'Advance left':'All paid'}</div><div class="${n<0?'pos':balCls(n)}" style="font-size:22px;direction:ltr;text-align:left;font-weight:700">${money(Math.abs(n))}</div></div>
   ${entryActions(a)}
   <button class="alt" style="width:100%" data-a="shareAccount">Share image on WhatsApp</button>
@@ -198,8 +211,9 @@ function pngPages(a){
   for(let i=0;i<rows.length;i+=PER)chunks.push(rows.slice(i,i+PER));
   if(!chunks.length)chunks.push([]);
   const balance=net(a);
+  const advance=advanceSummary(a);
   return Promise.all(chunks.map((pageRows,i)=>new Promise((res,rej)=>{
-    const last=i===chunks.length-1,headerH=112,tableH=54,footerH=last?124:0;
+    const last=i===chunks.length-1,headerH=112,tableH=54,footerH=last?236:0;
     const H=headerH+tableH+pageRows.length*RH+footerH+24;
     const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');if(!c)return rej(new Error('Canvas is unavailable.'));
     c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,headerH);
@@ -215,10 +229,13 @@ function pngPages(a){
       c.fillStyle=b>0?'#15803d':b<0?'#b91c1c':'#53657d';c.fillText((b<0?'−':'')+money(b),W-P,y+43);c.textAlign='left';y+=RH;
     });
     if(last){
-      y+=12;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,96);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,96);
-      c.fillStyle='#14213a';c.textAlign='left';c.font='bold 24px Arial,sans-serif';c.fillText('TOTAL DUE',P+18,y+38);
-      c.fillStyle=balance>0?'#15803d':balance<0?'#b91c1c':'#14213a';c.font='bold 30px Arial,sans-serif';c.textAlign='right';c.fillText(money(balance),W-P-18,y+42);
-      c.textAlign='left';c.fillStyle='#53657d';c.font='20px Arial,sans-serif';c.fillText(balance>0?'They owe you':balance<0?'You owe them':'All paid',P+18,y+72);
+      y+=12;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,208);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,208);
+      c.fillStyle='#53657d';c.textAlign='left';c.font='bold 19px Arial,sans-serif';c.fillText('ADVANCE PAYMENT',P+18,y+34);c.fillText('SPENT FROM ADVANCE',P+18,y+72);c.fillText('ADVANCE REMAINING',P+18,y+110);
+      c.fillStyle='#14213a';c.textAlign='right';c.font='bold 21px Arial,sans-serif';c.fillText(money(advance.total),W-P-18,y+34);c.fillText(`${money(advance.spent)} / ${money(advance.total)}`,W-P-18,y+72);c.fillStyle='#15803d';c.fillText(money(advance.remaining),W-P-18,y+110);
+      c.strokeStyle='#dde4ee';c.beginPath();c.moveTo(P+18,y+130);c.lineTo(W-P-18,y+130);c.stroke();
+      c.fillStyle='#14213a';c.textAlign='left';c.font='bold 24px Arial,sans-serif';c.fillText('TOTAL DUE',P+18,y+169);
+      c.fillStyle=balance>0?'#15803d':balance<0?'#b91c1c':'#14213a';c.font='bold 30px Arial,sans-serif';c.textAlign='right';c.fillText(money(balance),W-P-18,y+173);
+      c.textAlign='left';c.fillStyle='#53657d';c.font='20px Arial,sans-serif';c.fillText(balance>0?'They owe you':balance<0?'You owe them':'All paid',P+18,y+198);
     }
     cv.toBlob(bl=>bl?res(bl):rej(new Error('Could not generate the statement image.')),'image/png');
   })));
