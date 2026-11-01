@@ -1,51 +1,51 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>گھر کا حساب</title>
+<title>Roommates Ledger</title>
 <style>
 :root{--navy:#12345a;--blue:#1769d2;--bg:#f3f6fa;--card:#fff;--ink:#17263b;--mut:#53657d;--line:#dce4ee;--green:#16783a;--red:#ae2929;--gbg:#e8f5ec;--rbg:#fff0ee}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:20px/1.55 system-ui,"Noto Naskh Arabic","Segoe UI",Tahoma,Arial,sans-serif}
-header{background:var(--navy);color:#fff;padding:12px max(16px,calc((100vw - 760px)/2));display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
-header h1{font-size:20px;margin:0;flex:1}
-header .who{font-size:15px}
-main{max-width:760px;margin:0 auto;padding:18px 16px 100px}
-h2{font-size:25px;line-height:1.35;margin:4px 0 8px}h3{font-size:20px;margin:22px 0 10px}
-.intro{color:var(--mut);margin:0 0 18px;font-size:17px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
-.stat{border-radius:14px;padding:16px;border:1px solid var(--line);background:#fff}
-.stat small{display:block;color:var(--mut);font-size:16px}.stat b{display:block;font-size:25px;margin-top:4px;direction:ltr;text-align:right}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,"Segoe UI",Arial,sans-serif}
+header{background:var(--navy);color:#fff;padding:8px max(12px,calc((100vw - 760px)/2));display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;flex:1}
+header .who{font-size:13px}
+main{max-width:760px;margin:0 auto;padding:12px 12px 76px}
+h2{font-size:19px;line-height:1.3;margin:2px 0 6px}h3{font-size:16px;margin:14px 0 6px}
+.intro{color:var(--mut);margin:0 0 10px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.stat{border-radius:11px;padding:10px;border:1px solid var(--line);background:#fff}
+.stat small{display:block;color:var(--mut);font-size:12px}.stat b{display:block;font-size:18px;margin-top:2px;direction:ltr;text-align:left}
 .stat.g{background:var(--gbg)}.stat.g b{color:var(--green)}.stat.r{background:var(--rbg)}.stat.r b{color:var(--red)}
-button,.btn{font:inherit;font-weight:700;border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:12px;padding:12px 16px;cursor:pointer;min-height:54px}
+button,.btn{font:inherit;font-weight:650;border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;min-height:42px}
 button.alt{background:#fff;color:var(--blue)}button.warn{background:#fff;color:var(--red);border-color:#e4b7b7}
-button.sm{padding:8px 12px;min-height:44px;font-size:16px}
+button.sm{padding:6px 10px;min-height:36px;font-size:13px}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #90b8f5;outline-offset:2px}
 .profiles{display:grid;gap:12px;grid-template-columns:1fr}
-.profile{background:#fff;color:var(--navy);border:2px solid var(--line);border-radius:14px;padding:16px 18px;font-size:22px;text-align:right}
+.profile{background:#fff;color:var(--navy);border:2px solid var(--line);border-radius:10px;padding:12px 14px;font-size:17px;text-align:left}
 .profile:hover{border-color:var(--blue)}
-label{display:block;font-weight:700;margin:14px 0 0;font-size:18px}
-input,select,textarea{width:100%;font:inherit;padding:12px;border:1px solid #aebdd0;border-radius:10px;margin-top:6px;background:#fff;color:var(--ink)}
-input[type=number],input[type=date]{direction:ltr;text-align:right}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:0 0 auto}.grow{flex:1 1 180px!important}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
-.room-card{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:76px;text-align:right;background:#fff;color:var(--ink);border:1px solid var(--line);margin:8px 0;padding:14px 16px}
-.room-card .room-balance{display:block;font-size:16px;color:var(--mut);font-weight:500}.room-card b{font-size:19px}
-.tx-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
-.tx-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.tx-top b{font-size:18px}.tx-amount{direction:ltr;white-space:nowrap;font-weight:700}
-.tx-meta{color:var(--mut);font-size:15px;margin-top:4px}.tx-actions{display:flex;gap:8px;margin-top:10px}
-.mut{color:var(--mut);font-size:16px}.tag{font-size:14px;background:#e8eefb;color:var(--navy);border-radius:7px;padding:2px 8px}
-.note{background:#fff8e1;border:1px solid #f1d98a;border-radius:12px;padding:14px;font-size:16px}
-.bottom-nav{position:fixed;inset:auto 0 0;z-index:10;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
-.bottom-nav button{min-height:52px;padding:8px 4px;background:#fff;color:var(--navy);border-color:transparent;font-size:17px}
+label{display:block;font-weight:650;margin:10px 0 0;font-size:14px}
+input,select,textarea{width:100%;font:inherit;padding:9px;border:1px solid #aebdd0;border-radius:8px;margin-top:4px;background:#fff;color:var(--ink)}
+input[type=number],input[type=date]{direction:ltr;text-align:left}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:0 0 auto}.grow{flex:1 1 180px!important}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.room-card{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px;text-align:left;background:#fff;color:var(--ink);border:1px solid var(--line);margin:6px 0;padding:9px 12px}
+.room-card .room-balance{display:block;font-size:12px;color:var(--mut);font-weight:500}.room-card b{font-size:15px}
+.tx-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin:7px 0}
+.tx-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.tx-top b{font-size:14px}.tx-amount{direction:ltr;white-space:nowrap;font-weight:700}
+.tx-meta{color:var(--mut);font-size:12px;margin-top:3px}.tx-actions{display:flex;gap:7px;margin-top:7px}
+.mut{color:var(--mut);font-size:13px}.tag{font-size:12px;background:#e8eefb;color:var(--navy);border-radius:6px;padding:2px 7px}
+.note{background:#fff8e1;border:1px solid #f1d98a;border-radius:10px;padding:10px;font-size:13px}
+.bottom-nav{position:fixed;inset:auto 0 0;z-index:10;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+.bottom-nav button{min-height:42px;padding:6px 4px;background:#fff;color:var(--navy);border-color:transparent;font-size:14px}
 .bottom-nav button.on{background:#e8f0fb;color:var(--navy);border-color:#c9d9ef}
 .ov{position:fixed;inset:0;background:rgba(10,20,40,.58);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:20px}
-@media(min-width:640px){main{padding-top:26px}.ov{align-items:center}.sheet{border-radius:18px}}
-@media(max-width:380px){body{font-size:18px}main{padding-inline:12px}.stat{padding:12px}.stat b{font-size:21px}.actions{grid-template-columns:1fr}.room-card{padding:12px}}
-.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;z-index:30;max-width:92%;text-align:center}
+.sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:14px}
+@media(min-width:640px){main{padding-top:18px}.ov{align-items:center}.sheet{border-radius:14px}}
+@media(max-width:380px){main{padding-inline:10px}.stat{padding:8px}.stat b{font-size:16px}.actions{grid-template-columns:1fr 1fr}.room-card{padding:8px}.bottom-nav{gap:4px}}
+.toast{position:fixed;left:50%;bottom:62px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:9px 14px;border-radius:9px;z-index:30;max-width:92%;text-align:center;font-size:13px}
 </style>
 </head>
 <body>
@@ -57,7 +57,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const iso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
 const today=()=>iso(new Date());
-const fdate=d=>new Date(d+'T00:00:00').toLocaleDateString('ur-PK',{day:'numeric',month:'short',year:'numeric'});
+const fdate=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 const money=p=>'Rs. '+(Math.abs(p)/100).toLocaleString('en-PK',{minimumFractionDigits:Math.abs(p)%100?2:0,maximumFractionDigits:2});
 const toPaisa=v=>{const n=Number(v);return Number.isFinite(n)?Math.round(n*100):NaN};
 const validDate=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(new Date(d+'T00:00:00').getTime())&&iso(new Date(d+'T00:00:00'))===d;
@@ -70,16 +70,16 @@ if(me&&!S.roommates.some(r=>r.id===me))me=null;
 if(!me){const ih=S.roommates.find(r=>r.name==='Ihsan');if(ih){me=ih.id;try{localStorage.setItem(UK,me)}catch(e){}}}
 let ui={view:'home',acct:null};
 
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){alert('حساب محفوظ نہیں ہوا۔ جگہ خالی کریں یا بیک اپ بنائیں۔');return false}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){alert('Could not save your data. Free some browser storage and try again.');return false}}
 const nm=id=>{const r=S.roommates.find(x=>x.id===id);return r?r.name:'Unknown'};
 const sgn=t=>((t.kind==='item')===(t.dir==='in'))?1:-1;
 const mine=a=>S.txs.filter(t=>t.owner===me&&t.account===a).sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:x.created-y.created);
 const net=(a,ex)=>mine(a).filter(t=>t.id!==ex).reduce((s,t)=>s+sgn(t)*t.amount,0);
 const others=()=>S.roommates.filter(r=>r.id!==me);
-function balText(n,a){return n>0?`${nm(a)} سے آپ کو ${money(n)} لینے ہیں`:n<0?`${nm(a)} کو آپ نے ${money(-n)} دینے ہیں`:'حساب پورا ہے'}
+function balText(n,a){return n>0?`${nm(a)} owes you ${money(n)}`:n<0?`You owe ${nm(a)} ${money(-n)}`:'All paid'}
 function balCls(n){return n>0?'pos':n<0?'neg':'mut'}
-function typeLabel(t){return t.kind==='item'?(t.dir==='in'?'آپ کا خرچ':'دوسرے کا خرچ'):'ادائیگی'}
-function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):t.dir==='in'?'ادائیگی وصول':'ادائیگی دی'}
+function typeLabel(t){return t.kind==='item'?(t.dir==='in'?'Your expense':'Their expense'):'Payment'}
+function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):t.dir==='in'?'Payment received':'Payment made'}
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
 function modal(h){closeModal();const o=document.createElement('div');o.className='ov';o.id='modal';o.innerHTML='<div class="sheet">'+h+'</div>';o.addEventListener('mousedown',e=>{if(e.target===o)closeModal()});document.body.appendChild(o)}
 function closeModal(){const o=$('#modal');if(o)o.remove()}
@@ -88,101 +88,97 @@ function closeModal(){const o=$('#modal');if(o)o.remove()}
 function render(){
   const app=$('#app');
   if(!me){
-    app.innerHTML=`<header><h1>گھر کا حساب</h1></header><main><h2>آپ کون ہیں؟</h2><p class="intro">اپنا نام دبائیں اور اپنا حساب کھولیں۔</p><div class="profiles">${S.roommates.map(r=>`<button class="profile" data-a="pick" data-id="${r.id}">${esc(r.name)}</button>`).join('')}</div><div class="note" style="margin-top:16px">حساب اسی موبائل میں محفوظ رہتا ہے۔ فون بدلنے سے پہلے بیک اپ بنائیں۔</div></main>`;return}
-  const tabs=[['home','حساب'],['mates','لوگ'],['backup','بیک اپ']];
+    app.innerHTML=`<header><h1>Roommates Ledger</h1></header><main><h2>Who are you?</h2><p class="intro">Tap your name to open your ledger.</p><div class="profiles">${S.roommates.map(r=>`<button class="profile" data-a="pick" data-id="${r.id}">${esc(r.name)}</button>`).join('')}</div></main>`;return}
+  const tabs=[['home','Dashboard'],['mates','Roommates']];
   let body='';
-  if(ui.view==='home')body=home();else if(ui.view==='acct')body=acct();else if(ui.view==='mates')body=mates();else body=backup();
-  app.innerHTML=`<header><h1>گھر کا حساب</h1><span class="who">${esc(nm(me))}</span><button class="sm" data-a="switch">صارف بدلیں</button></header>
+  if(ui.view==='home')body=home();else if(ui.view==='acct')body=acct();else body=mates();
+  app.innerHTML=`<header><h1>Roommates Ledger</h1><span class="who">${esc(nm(me))}</span><button class="sm" data-a="switch">Switch</button></header>
   <main>${body}</main><nav class="bottom-nav">${tabs.map(t=>`<button class="${ui.view===t[0]||(ui.view==='acct'&&t[0]==='home')?'on':''}" data-a="nav" data-v="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
   if(ui.view==='acct')renderList();
 }
 function home(){
   let rec=0,pay=0;
   const cards=others().map(r=>{const n=net(r.id);if(n>0)rec+=n;else pay-=n;
-    return `<button class="room-card" data-a="open" data-id="${r.id}"><span><b>${esc(r.name)}</b><span class="room-balance">${n>0?'آپ کو لینے ہیں':n<0?'آپ نے دینے ہیں':'حساب پورا ہے'}</span></span><b class="${balCls(n)}">${money(n)}</b></button>`}).join('');
-  return `<h2>آپ کا حساب</h2><p class="intro">خرچ یا ادائیگی درج کرنے کے لیے بٹن دبائیں۔</p>
-  <div class="grid"><div class="stat g"><small>آپ کو واپس ملنے ہیں</small><b>${money(rec)}</b></div><div class="stat r"><small>آپ کو واپس کرنے ہیں</small><b>${money(pay)}</b></div></div>
-  <div class="actions"><button data-a="form" data-k="item">+ خرچ لکھیں</button>${rec+pay?`<button class="alt" data-a="form" data-k="payment">ادائیگی لکھیں</button>`:''}</div>
-  <h3>کس کا حساب دیکھنا ہے؟</h3>${cards||'<p class="mut">پہلے نیچے «لوگ» میں نام شامل کریں۔</p>'}`;
+    return `<button class="room-card" data-a="open" data-id="${r.id}"><span><b>${esc(r.name)}</b><span class="room-balance">${n>0?'Owes you':n<0?'You owe them':'All paid'}</span></span><b class="${balCls(n)}">${money(n)}</b></button>`}).join('');
+  return `<h2>Dashboard</h2>
+  <div class="grid"><div class="stat g"><small>Owed to you</small><b>${money(rec)}</b></div><div class="stat r"><small>You owe</small><b>${money(pay)}</b></div></div>
+  <div class="actions"><button data-a="form" data-k="item">+ Add expense</button>${rec+pay?`<button class="alt" data-a="form" data-k="payment">Add payment</button>`:''}</div>
+  <h3>Roommate balances</h3>${cards||'<p class="mut">Add a roommate to get started.</p>'}`;
 }
 function runRows(a){let b=0;return mine(a).map(t=>{b+=sgn(t)*t.amount;return{t,b}})}
 function acct(){
   const a=ui.acct,n=net(a);
-  return `<button class="alt sm" data-a="nav" data-v="home">← واپس</button><h2 style="margin-top:14px">${esc(nm(a))} کا حساب</h2>
-  <div class="card"><div class="mut">${n>0?'آپ کو واپس ملنے ہیں':n<0?'آپ کو واپس کرنے ہیں':'حساب پورا ہے'}</div><div class="${balCls(n)}" style="font-size:28px;direction:ltr;text-align:right;font-weight:700">${money(n)}</div></div>
-  <div class="actions"><button data-a="form" data-k="item" data-acct="${a}">+ خرچ لکھیں</button>${n?`<button class="alt" data-a="form" data-k="payment" data-acct="${a}">ادائیگی لکھیں</button>`:''}</div>
-  <button class="alt" style="width:100%" data-a="shareAccount">تصویر WhatsApp پر بھیجیں</button>
-  <h3>پرانا حساب</h3><div id="list"></div>`;
+  return `<button class="alt sm" data-a="nav" data-v="home">← Dashboard</button><h2 style="margin-top:10px">${esc(nm(a))}</h2>
+  <div class="card"><div class="mut">${n>0?'Owes you':n<0?'You owe':'All paid'}</div><div class="${balCls(n)}" style="font-size:22px;direction:ltr;text-align:left;font-weight:700">${money(n)}</div></div>
+  <div class="actions"><button data-a="form" data-k="item" data-acct="${a}">+ Add expense</button>${n?`<button class="alt" data-a="form" data-k="payment" data-acct="${a}">Add payment</button>`:''}</div>
+  <button class="alt" style="width:100%" data-a="shareAccount">Share image on WhatsApp</button>
+  <h3>Recent activity</h3><div id="list"></div>`;
 }
 function renderList(){
   const rows=runRows(ui.acct).reverse();
-  $('#list').innerHTML=rows.length?rows.map(({t,b})=>`<div class="tx-card"><div class="tx-top"><b>${esc(detail(t))}</b><span class="tx-amount ${sgn(t)>0?'pos':'neg'}">${sgn(t)>0?'+':'−'}${money(t.amount)}</span></div><div class="tx-meta">${fdate(t.date)} · باقی ${b<0?'−':''}${money(b)}</div><div class="tx-actions"><button class="alt sm" data-a="form" data-id="${t.id}">بدلیں</button><button class="warn sm" data-a="del" data-id="${t.id}">مٹائیں</button></div></div>`).join(''):'<p class="mut">ابھی کوئی اندراج نہیں۔ خرچ لکھنے کے لیے اوپر بٹن دبائیں۔</p>';
+  $('#list').innerHTML=rows.length?rows.map(({t,b})=>`<div class="tx-card"><div class="tx-top"><b>${esc(detail(t))}</b><span class="tx-amount ${sgn(t)>0?'pos':'neg'}">${sgn(t)>0?'+':'−'}${money(t.amount)}</span></div><div class="tx-meta">${fdate(t.date)} · Balance ${b<0?'−':''}${money(b)}</div><div class="tx-actions"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button><button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></div></div>`).join(''):'<p class="mut">No entries yet. Add an expense to get started.</p>';
 }
 function mates(){
-  return `<h2>لوگوں کے نام</h2><p class="intro">جس کے ساتھ حساب رکھنا ہے، اس کا نام شامل کریں۔</p><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">آپ</span>':''}</b><button class="alt sm" data-a="ren" data-id="${r.id}">نام بدلیں</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">ہٹائیں</button>`:''}</div>`).join('')}
-  <label for="newName">نیا نام</label><div class="row" style="margin-top:8px"><input class="grow" id="newName" placeholder="نام لکھیں"><button data-a="add">شامل کریں</button></div></div>`;
-}
-function backup(){
-  return `<h2>حساب محفوظ رکھیں</h2><p class="intro">فون بدلنے سے پہلے بیک اپ بنائیں۔</p><div class="card"><button style="width:100%;margin-bottom:10px" data-a="export">بیک اپ محفوظ کریں</button><button class="alt" style="width:100%" data-a="import">بیک اپ واپس کھولیں</button><input type="file" id="file" accept=".json,application/json" hidden>
-  <p class="mut">حساب اسی فون میں محفوظ رہتا ہے۔ بیک اپ فائل کسی محفوظ جگہ رکھیں۔</p></div>`;
+  return `<h2>Roommates</h2><p class="intro">Add or manage names for your ledger.</p><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b><button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
+  <label for="newName">Add a roommate</label><div class="row" style="margin-top:6px"><input class="grow" id="newName" placeholder="Name"><button data-a="add">Add</button></div></div>`;
 }
 
 /* ---------- Forms ---------- */
 function form(kind,id,acctId){
   const t=id?S.txs.find(x=>x.id===id&&x.owner===me):null;if(id&&!t)return toast('This transaction is not available in the current ledger.');
   if(t)kind=t.kind;
-  if(!others().length)return toast('پہلے «لوگ» میں کسی کا نام شامل کریں۔');
+  if(!others().length)return toast('Add a roommate first.');
   const it=kind==='item',sel=t?t.account:(acctId||(ui.view==='acct'?ui.acct:null));
   const balance=sel?net(sel,t?t.id:null):null;
   const choices=others().filter(r=>it||t||net(r.id)!==0);
-  if(!it&&!t&&sel&&balance===0)return toast('اس شخص کا کوئی بقایا نہیں۔');
-  if(!it&&!t&&!sel&&!choices.length)return toast('ابھی کسی کو ادائیگی باقی نہیں۔');
-  modal(`<h2>${t?'اندراج بدلیں':it?'خرچ لکھیں':'ادائیگی لکھیں'}</h2><p class="intro">${it?'کس کے لیے خرچ کیا اور کتنے روپے؟':'جس شخص کا حساب ہے، اس کا نام اور رقم لکھیں۔'}</p><form id="f" data-kind="${kind}" data-id="${id||''}">
-  ${it||!sel?`<label>${it?'کس کا خرچ؟':'کس کا حساب؟'}<select name="account" required>${choices.map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}${!it?' — '+money(Math.abs(net(r.id)))+' باقی':''}</option>`).join('')}</select></label>`:`<input type="hidden" name="account" value="${esc(sel)}">`}
-  ${it?`<label>خرچ کس نے کیا؟<select name="dir"><option value="in" ${t&&t.dir==='in'?'selected':''}>میں نے — مجھے پیسے واپس ملیں گے</option><option value="out" ${t&&t.dir==='out'?'selected':''}>انہوں نے — مجھے انہیں پیسے دینے ہیں</option></select></label>
-  <label>کس چیز کا خرچ؟<input name="desc" required maxlength="80" value="${esc(t?t.desc:'')}" placeholder="مثلاً کھانا"></label>`:''}
-  <label>رقم کتنی؟ (روپے)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" max="999999999.99" required value="${t?t.amount/100:''}" placeholder="مثلاً 500"></label>
-  ${!it&&balance!==null?`<p class="mut">ابھی <b>${money(Math.abs(balance))}</b> باقی ہیں۔</p>`:''}
+  if(!it&&!t&&sel&&balance===0)return toast('There is no balance due for this roommate.');
+  if(!it&&!t&&!sel&&!choices.length)return toast('There are no outstanding payments.');
+  modal(`<h2>${t?'Edit entry':it?'Add expense':'Add payment'}</h2><p class="intro">${it?'Who was this expense for? Enter the amount.':'Choose the roommate and enter the amount paid.'}</p><form id="f" data-kind="${kind}" data-id="${id||''}">
+  ${it||!sel?`<label>${it?'Roommate':'Paid to' }<select name="account" required>${choices.map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}${!it?' — '+money(Math.abs(net(r.id)))+' due':''}</option>`).join('')}</select></label>`:`<input type="hidden" name="account" value="${esc(sel)}">`}
+  ${it?`<label>Who paid?<select name="dir"><option value="in" ${t&&t.dir==='in'?'selected':''}>I paid — they owe me</option><option value="out" ${t&&t.dir==='out'?'selected':''}>They paid — I owe them</option></select></label>
+  <label>What was it for?<input name="desc" required maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Groceries"></label>`:''}
+  <label>Amount (Rs.)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" max="999999999.99" required value="${t?t.amount/100:''}" placeholder="e.g. 500"></label>
+  ${!it&&balance!==null?`<p class="mut">Balance due: <b>${money(Math.abs(balance))}</b></p>`:''}
   <input type="hidden" name="date" value="${t?t.date:today()}">
   ${it?`<input type="hidden" name="qty" value="${esc(t?t.qty:'')}"><input type="hidden" name="notes" value="${esc(t?t.notes:'')}">`:''}
-  <div class="actions"><button type="submit">محفوظ کریں</button><button class="alt" type="button" data-a="close">واپس</button></div></form>`);
+  <div class="actions"><button type="submit">Save</button><button class="alt" type="button" data-a="close">Cancel</button></div></form>`);
 }
 document.addEventListener('submit',e=>{
   if(e.target.id!=='f')return;e.preventDefault();
   const f=e.target,v=Object.fromEntries(new FormData(f)),kind=f.dataset.kind,id=f.dataset.id;
   const amt=toPaisa(v.amount);
-  if(!Number.isSafeInteger(amt)||amt<=0)return toast('صحیح رقم لکھیں۔');
-  if(v.account===me||!S.roommates.some(r=>r.id===v.account))return toast('ایک نام منتخب کریں۔');
-  if(!validDate(v.date))return toast('تاریخ درست نہیں۔');
-  if(!['item','payment'].includes(kind)||(kind==='item'&&!['in','out'].includes(v.dir)))return toast('اندراج کی قسم منتخب کریں۔');
-  if(kind==='item'&&!v.desc.trim())return toast('خرچ کی چیز کا نام لکھیں۔');
-  if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('یہ اندراج نہیں ملا۔');
+  if(!Number.isSafeInteger(amt)||amt<=0)return toast('Enter a valid amount greater than zero.');
+  if(v.account===me||!S.roommates.some(r=>r.id===v.account))return toast('Choose a roommate.');
+  if(!validDate(v.date))return toast('The date is invalid.');
+  if(!['item','payment'].includes(kind)||(kind==='item'&&!['in','out'].includes(v.dir)))return toast('Choose a valid entry type.');
+  if(kind==='item'&&!v.desc.trim())return toast('Enter a description.');
+  if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('This entry is not available.');
   let dir=v.dir;
   if(kind==='payment'){
     const n=net(v.account,id||null);
-    if(n===0)return toast('اس شخص کا کوئی بقایا نہیں۔');
+    if(n===0)return toast('There is no balance due for this roommate.');
     dir=n>0?'in':'out';
     const outstanding=Math.abs(n);
-    if(amt>outstanding)return toast(`باقی رقم ${money(outstanding)} ہے۔ اس سے زیادہ نہیں دے سکتے۔`);
+    if(amt>outstanding)return toast(`The balance due is ${money(outstanding)}. The payment is too high.`);
   }
   const now=Date.now(),data={account:v.account,dir,amount:amt,date:v.date,notes:kind==='item'?(v.notes||'').trim():'',kind,desc:kind==='item'?v.desc.trim():'Payment',qty:kind==='item'?(v.qty||'').trim():'',method:''};
   if(id){Object.assign(S.txs.find(t=>t.id===id&&t.owner===me),data,{updated:now})}
   else S.txs.push(Object.assign({id:uid(),owner:me,created:now,updated:now},data));
-  if(!save())return;closeModal();toast('حساب محفوظ ہوگیا۔');render();
+  if(!save())return;closeModal();toast('Saved.');render();
 });
 
 /* ---------- Statements ---------- */
 function periodLabel(period){
-  return 'مکمل حساب';
+  return 'All time';
 }
 function stData(a,period='all'){
   const rows=runRows(a);
   const total=(kind,dir)=>rows.filter(x=>x.t.kind===kind&&(!dir||x.t.dir===dir)).reduce((s,x)=>s+x.t.amount,0);
   return{rows,net:net(a),lines:[
-    ['کل خرچ',total('item')],
-    ['کل ادائیگی',total('payment')],
-    ['آپ کا کیا ہوا خرچ',total('item','in')],
-    ['آپ کو واپس ملی رقم',total('payment','in')]
+    ['Total expenses',total('item')],
+    ['Total payments',total('payment')],
+    ['Expenses you paid',total('item','in')],
+    ['Payments received',total('payment','in')]
   ],period:periodLabel(period)};
 }
 function fit(c,s,w){if(c.measureText(s).width<=w)return s;while(s.length>1&&c.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…'}
@@ -194,21 +190,21 @@ function pngPages(a,period='all'){
   const sumH=58+d.lines.length*48+144;
   return Promise.all(chunks.map((rows,i)=>new Promise((res,rej)=>{
     const last=i===chunks.length-1,top=390,H=top+(rows.length?58:0)+rows.length*RH+(last?sumH:0)+90;
-    const cv=document.createElement('canvas');cv.width=W;cv.height=H;cv.dir='rtl';const c=cv.getContext('2d');if(!c)return rej(new Error('Canvas is unavailable.'));c.direction='rtl';
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');if(!c)return rej(new Error('Canvas is unavailable.'));
     c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,170);
     c.fillStyle='#fff';c.font='bold 52px Arial,sans-serif';c.fillText('ROOMMATES LEDGER',P,78);
-    c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('حساب کی تفصیل'+(chunks.length>1?`  •  صفحہ ${i+1} / ${chunks.length}`:''),P,126);
-    c.fillStyle='#14213a';c.font='bold 29px Arial,sans-serif';c.fillText('نام: '+nm(a),P,220);
-    c.font='27px Arial,sans-serif';c.fillText('حساب رکھنے والے: '+nm(me),P,266);c.fillText('مدت: '+d.period,P,308);
-    c.fillStyle='#5b6b85';c.textAlign='right';c.fillText('تاریخ: '+fdate(today()),W-P,266);c.textAlign='left';
+    c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('Account statement'+(chunks.length>1?`  •  Page ${i+1} of ${chunks.length}`:''),P,126);
+    c.fillStyle='#14213a';c.font='bold 29px Arial,sans-serif';c.fillText('Roommate: '+nm(a),P,220);
+    c.font='27px Arial,sans-serif';c.fillText('Ledger owner: '+nm(me),P,266);c.fillText('Period: '+d.period,P,308);
+    c.fillStyle='#5b6b85';c.textAlign='right';c.fillText('Date: '+fdate(today()),W-P,266);c.textAlign='left';
     if(i===0){
       c.fillStyle='#f2f5fa';c.fillRect(P,330,W-2*P,46);c.font='bold 22px Arial,sans-serif';c.fillStyle='#1b3f6b';
-      c.fillText('خرچ '+money(d.lines[0][1]),P+16,360);c.fillText('ادائیگی '+money(d.lines[1][1]),P+365,360);
-      c.fillText('باقی '+fit(c,balText(d.net,a),410),P+700,360);
+      c.fillText('EXPENSES '+money(d.lines[0][1]),P+16,360);c.fillText('PAYMENTS '+money(d.lines[1][1]),P+365,360);
+      c.fillText('BALANCE '+fit(c,balText(d.net,a),410),P+700,360);
     }
     let y=top;
     if(rows.length){c.fillStyle='#e8eefb';c.fillRect(0,y,W,58);c.fillStyle='#1b3f6b';c.font='bold 24px Arial,sans-serif';
-      c.fillText('تاریخ',P,y+38);c.fillText('تفصیل',P+190,y+38);c.fillText('قسم',P+590,y+38);c.textAlign='right';c.fillText('رقم',850,y+38);c.fillText('بقایا',W-P,y+38);c.textAlign='left';y+=58}
+      c.fillText('Date',P,y+38);c.fillText('Description',P+190,y+38);c.fillText('Type',P+590,y+38);c.textAlign='right';c.fillText('Amount',850,y+38);c.fillText('Balance',W-P,y+38);c.textAlign='left';y+=58}
     rows.forEach(({t,b},k)=>{
       if(k%2){c.fillStyle='#f6f8fc';c.fillRect(0,y,W,RH)}
       c.fillStyle='#14213a';c.font='24px Arial,sans-serif';c.fillText(fdate(t.date),P,y+44);
@@ -221,10 +217,10 @@ function pngPages(a,period='all'){
       y+=24;const bh=d.lines.length*48+134;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,bh);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,bh);
       let yy=y+42;c.font='24px Arial,sans-serif';
       d.lines.forEach(l=>{c.fillStyle='#14213a';c.textAlign='left';c.fillText(l[0],P+20,yy);c.textAlign='right';c.font='bold 26px Arial,sans-serif';c.fillText(money(l[1]),W-P-20,yy);c.font='26px Arial,sans-serif';yy+=48});
-      c.textAlign='left';c.font='bold 29px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,'باقی رقم: '+balText(d.net,a),W-2*P-40),P+20,yy+28);
+      c.textAlign='left';c.font='bold 29px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,'Balance due: '+balText(d.net,a),W-2*P-40),P+20,yy+28);
     }
-    c.fillStyle='#8a97ad';c.font='20px Arial,sans-serif';c.textAlign='center';c.fillText('گھر کا حساب  •  ذاتی ریکارڈ',W/2,H-34);
-    cv.toBlob(bl=>bl?res(bl):rej(new Error('تصویر تیار نہیں ہوسکی۔')),'image/png');
+    c.fillStyle='#8a97ad';c.font='20px Arial,sans-serif';c.textAlign='center';c.fillText('Roommates Ledger  •  Personal record',W/2,H-34);
+    cv.toBlob(bl=>bl?res(bl):rej(new Error('Could not generate the statement image.')),'image/png');
   })));
 }
 function fileBase(a,period){
@@ -243,7 +239,7 @@ function downloadFiles(files){
 }
 function shareFallback(files){
   downloadFiles(files);
-  toast('تصویر محفوظ ہوگئی۔ اسے WhatsApp میں بھیج دیں۔');
+  toast('Image downloaded. Attach it in WhatsApp to share.');
 }
 async function shareAccount(){
   const a=ui.acct,period='all';
@@ -254,54 +250,15 @@ async function shareAccount(){
     if(!supported){shareFallback(files);return}
     try{
       await navigator.share({files,title:`Roommates Ledger — ${nm(a)} statement`});
-      toast('تصویر بھیجنے کے لیے WhatsApp منتخب کریں۔');
+      toast('Choose WhatsApp to share the statement image.');
     }catch(e){
       if(e.name==='AbortError')return;
       shareFallback(files);
     }
-  }catch(e){alert(e.message||'تصویر تیار نہیں ہوسکی۔')}
+  }catch(e){alert(e.message||'Could not generate the account statement.')}
 }
 
 /* ---------- Actions ---------- */
-function exportData(){
-  const b=new Blob([JSON.stringify({app:'roommates-ledger',version:1,exported:new Date().toISOString(),roommates:S.roommates,txs:S.txs},null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`roommates-ledger-backup-${today()}.json`;a.click();toast('بیک اپ محفوظ ہوگیا۔');
-}
-function validBackup(d){
-  if(!d||d.app!=='roommates-ledger'||d.version!==1||!Array.isArray(d.roommates)||!Array.isArray(d.txs)||!d.roommates.length)return false;
-  const ids=new Set(),names=new Set();
-  for(const r of d.roommates){
-    if(!r||typeof r.id!=='string'||!r.id.trim()||typeof r.name!=='string'||!r.name.trim()||r.name.length>40||ids.has(r.id)||names.has(r.name.trim().toLowerCase()))return false;
-    ids.add(r.id);names.add(r.name.trim().toLowerCase());
-  }
-  const txIds=new Set();
-  return d.txs.every(t=>{
-    if(!t||typeof t.id!=='string'||!t.id.trim()||txIds.has(t.id)||!ids.has(t.owner)||!ids.has(t.account)||t.owner===t.account||
-      !['item','payment'].includes(t.kind)||!['in','out'].includes(t.dir)||!Number.isSafeInteger(t.amount)||t.amount<=0||!validDate(t.date))return false;
-    if(t.kind==='item'&&(typeof t.desc!=='string'||!t.desc.trim()||t.desc.length>80))return false;
-    if(t.kind==='payment'&&t.desc!=='Payment')return false;
-    if(t.notes!=null&&(typeof t.notes!=='string'||t.notes.length>300))return false;
-    if(t.qty!=null&&(typeof t.qty!=='string'||t.qty.length>30))return false;
-    if(t.method!=null&&(typeof t.method!=='string'||t.method.length>40))return false;
-    txIds.add(t.id);return true;
-  });
-}
-function importData(file){
-  const r=new FileReader();r.onerror=()=>alert('بیک اپ فائل نہیں کھل سکی۔');
-  r.onload=()=>{
-    try{
-      const d=JSON.parse(r.result);
-      if(!validBackup(d))throw new Error('اس بیک اپ میں درست حساب موجود نہیں۔');
-      if(!confirm(`اس فون کا موجودہ حساب بدل کر بیک اپ کھولنا ہے؟ (${d.roommates.length} نام، ${d.txs.length} اندراج)`))return;
-      const previous=S;S={roommates:d.roommates,txs:d.txs};
-      if(!save()){S=previous;return}
-      if(!S.roommates.some(x=>x.id===me)){const ih=S.roommates.find(x=>x.name==='Ihsan');me=ih?ih.id:null}
-      if(me){try{localStorage.setItem(UK,me)}catch(e){alert('بیک اپ کھل گیا، لیکن آپ کا نام محفوظ نہیں ہوسکا۔')}}
-      else{try{localStorage.removeItem(UK)}catch(e){alert('بیک اپ کھل گیا، لیکن پرانا نام نہیں ہٹ سکا۔')}}
-      ui.view='home';ui.acct=null;render();toast('بیک اپ کھل گیا۔');
-    }catch(e){alert(e.message==='اس بیک اپ میں درست حساب موجود نہیں۔'?e.message:'یہ بیک اپ فائل درست نہیں۔')}
-  };r.readAsText(file);
-}
 function act(a,d){
   switch(a){
     case 'pick':me=d.id;try{localStorage.setItem(UK,me)}catch(e){}ui.view='home';render();break;
@@ -312,27 +269,22 @@ function act(a,d){
     case 'shareAccount':shareAccount();break;
     case 'close':closeModal();break;
     case 'del':{const t=S.txs.find(x=>x.id===d.id);
-      if(confirm(`${detail(t)}، ${money(t.amount)} کا اندراج مٹانا ہے؟ یہ واپس نہیں آئے گا۔`)){S.txs=S.txs.filter(x=>x.id!==d.id);if(save()){render();toast('اندراج مٹا دیا۔')}}break}
-    case 'add':{const v=$('#newName').value.trim();if(!v)return toast('نام لکھیں۔');
-      if(S.roommates.some(r=>r.name.toLowerCase()===v.toLowerCase()))return toast('یہ نام پہلے سے موجود ہے۔');
+      if(confirm(`Delete ${detail(t)} for ${money(t.amount)}? This cannot be undone.`)){S.txs=S.txs.filter(x=>x.id!==d.id);if(save()){render();toast('Entry deleted.')}}break}
+    case 'add':{const v=$('#newName').value.trim();if(!v)return toast('Enter a name.');
+      if(S.roommates.some(r=>r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
       S.roommates.push({id:uid(),name:v});if(save())render();break}
     case 'ren':{const r=S.roommates.find(x=>x.id===d.id);
-      modal(`<h2>نام بدلیں</h2><label>نیا نام<input id="rn" value="${esc(r.name)}" maxlength="40"></label><div class="actions"><button data-a="renOk" data-id="${r.id}">محفوظ کریں</button><button class="alt" data-a="close">واپس</button></div>`);break}
-    case 'renOk':{const v=$('#rn').value.trim();if(!v)return toast('نام لکھیں۔');
-      if(S.roommates.some(r=>r.id!==d.id&&r.name.toLowerCase()===v.toLowerCase()))return toast('یہ نام پہلے سے موجود ہے۔');
+      modal(`<h2>Rename roommate</h2><label>New name<input id="rn" value="${esc(r.name)}" maxlength="40"></label><div class="actions"><button data-a="renOk" data-id="${r.id}">Save</button><button class="alt" data-a="close">Cancel</button></div>`);break}
+    case 'renOk':{const v=$('#rn').value.trim();if(!v)return toast('Enter a name.');
+      if(S.roommates.some(r=>r.id!==d.id&&r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
       S.roommates.find(r=>r.id===d.id).name=v;if(save()){closeModal();render()}break}
-    case 'rem':{if(S.txs.some(t=>t.owner===d.id||t.account===d.id))return alert('اس نام کے ساتھ پرانا حساب موجود ہے، اس لیے اسے نہیں ہٹا سکتے۔');
-      if(d.id===me)return alert('پہلے اوپر اپنا نام بدلیں۔');
-      if(S.roommates.length<=2)return alert('کم از کم دو نام رکھنے ہوں گے۔');
-      if(confirm(`${nm(d.id)} کو ہٹانا ہے؟`)){S.roommates=S.roommates.filter(r=>r.id!==d.id);if(save())render()}break}
-    case 'export':exportData();break;
-    case 'import':$('#file').click();break;
+    case 'rem':{if(S.txs.some(t=>t.owner===d.id||t.account===d.id))return alert('This roommate has ledger entries and cannot be removed.');
+      if(d.id===me)return alert('Switch to another user first.');
+      if(S.roommates.length<=2)return alert('Keep at least two roommates.');
+      if(confirm(`Remove ${nm(d.id)}?`)){S.roommates=S.roommates.filter(r=>r.id!==d.id);if(save())render()}break}
   }
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset)});
-document.addEventListener('change',e=>{
-  if(e.target.id==='file'&&e.target.files[0]){importData(e.target.files[0]);e.target.value=''}
-});
 render();
 </script>
 </body>
