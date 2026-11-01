@@ -18,6 +18,8 @@ h2{font-size:19px;line-height:1.3;margin:2px 0 6px}h3{font-size:16px;margin:14px
 .grid{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .stat{border-radius:11px;padding:10px;border:1px solid var(--line);background:#fff}
 .stat small{display:block;color:var(--mut);font-size:12px}.stat b{display:block;font-size:18px;margin-top:2px;direction:ltr;text-align:left}
+.stat-wide{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stat-wide b{margin:0;white-space:nowrap}
 .stat.g{background:var(--gbg)}.stat.g b{color:var(--green)}.stat.r{background:var(--rbg)}.stat.r b{color:var(--red)}
 button,.btn{font:inherit;font-weight:650;border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:9px;padding:9px 12px;cursor:pointer;min-height:42px}
 button.alt{background:#fff;color:var(--blue)}button.warn{background:#fff;color:var(--red);border-color:#e4b7b7}
@@ -98,10 +100,11 @@ function render(){
 }
 function home(){
   let rec=0,pay=0;
+  const expenses=S.txs.filter(t=>t.owner===me&&t.kind==='item'&&t.dir==='in').reduce((sum,t)=>sum+t.amount,0);
   const cards=others().map(r=>{const n=net(r.id);if(n>0)rec+=n;else pay-=n;
     return `<button class="room-card" data-a="open" data-id="${r.id}"><span><b>${esc(r.name)}</b><span class="room-balance">${n>0?'Owes you':n<0?'You owe them':'All paid'}</span></span><b class="${balCls(n)}">${money(n)}</b></button>`}).join('');
   return `<h2>Dashboard</h2>
-  <div class="grid"><div class="stat g"><small>Owed to you</small><b>${money(rec)}</b></div><div class="stat r"><small>You owe</small><b>${money(pay)}</b></div></div>
+  <div class="grid"><div class="stat g"><small>Owed to you</small><b>${money(rec)}</b></div><div class="stat r"><small>You owe</small><b>${money(pay)}</b></div><div class="stat stat-wide"><small>Total expenses you paid for roommates</small><b>${money(expenses)}</b></div></div>
   <div class="actions"><button data-a="form" data-k="item">+ Add expense</button>${rec+pay?`<button class="alt" data-a="form" data-k="payment">Add payment</button>`:''}</div>
   <h3>Roommate balances</h3>${cards||'<p class="mut">Add a roommate to get started.</p>'}`;
 }
