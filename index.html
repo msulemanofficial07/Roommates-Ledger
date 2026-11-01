@@ -133,6 +133,7 @@ function acct(){
   <div class="actions"><button data-a="form" data-k="item" data-acct="${a}" data-dir="in">+ Add expense</button><button class="alt" data-a="form" data-k="payment" data-acct="${a}">Add advance / payment</button></div>
   <button class="alt" style="width:100%;margin-bottom:8px" data-a="form" data-k="item" data-acct="${a}" data-dir="out">Record purchase for you</button>
   <button class="alt" style="width:100%" data-a="shareAccount">Share image on WhatsApp</button>
+  <button class="warn" style="width:100%;margin-top:8px" data-a="delHistory" data-id="${a}">Delete this roommate's history</button>
   <h3>Recent activity</h3><div id="list"></div>`;
 }
 function renderList(){
@@ -140,8 +141,9 @@ function renderList(){
   $('#list').innerHTML=rows.length?rows.map(({t,b})=>`<div class="tx-card"><div class="tx-top"><b>${esc(detail(t))}</b><span class="tx-amount ${sgn(t)>0?'pos':'neg'}">${sgn(t)>0?'+':'−'}${money(t.amount)}</span></div><div class="tx-meta">${fdate(t.date)}${t.kind==='payment'?' · '+ftime(t.created):''} · Balance ${b<0?'−':''}${money(b)}</div><div class="tx-actions"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button><button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></div></div>`).join(''):'<p class="mut">No entries yet. Add an expense to get started.</p>';
 }
 function mates(){
-  return `<h2>Roommates</h2><p class="intro">Open a roommate ledger or manage names.</p><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b>${r.id!==me?`<button class="alt sm" data-a="open" data-id="${r.id}">Open</button>`:''}<button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
-  <label for="newName">Add a roommate</label><div class="row" style="margin-top:6px"><input class="grow" id="newName" placeholder="Name"><button data-a="add">Add</button></div></div>`;
+  return `<h2>Roommates</h2><p class="intro">Open a roommate ledger or manage names.</p><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b>${r.id!==me?`<button class="alt sm" data-a="open" data-id="${r.id}">Open</button><button class="warn sm" data-a="delHistory" data-id="${r.id}">Delete history</button>`:''}<button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
+  <label for="newName">Add a roommate</label><div class="row" style="margin-top:6px"><input class="grow" id="newName" placeholder="Name"><button data-a="add">Add</button></div></div>
+  <div class="card"><p class="intro">This only deletes your ledger entries. Roommate names and other people's ledgers stay safe.</p><button class="warn" style="width:100%" data-a="delAllHistory">Delete all my history</button></div>`;
 }
 
 /* ---------- Forms ---------- */
@@ -260,6 +262,22 @@ function act(a,d){
     case 'close':closeModal();break;
     case 'del':{const t=S.txs.find(x=>x.id===d.id);
       if(confirm(`Delete ${detail(t)} for ${money(t.amount)}? This cannot be undone.`)){S.txs=S.txs.filter(x=>x.id!==d.id);if(save()){render();toast('Entry deleted.')}}break}
+    case 'delHistory':{
+      const roommate=S.roommates.find(r=>r.id===d.id);
+      if(!roommate||roommate.id===me)return toast('Choose a valid roommate.');
+      const entries=S.txs.filter(t=>t.owner===me&&t.account===roommate.id);
+      if(!entries.length)return toast(`No history to delete for ${roommate.name}.`);
+      if(confirm(`Delete all ${entries.length} history ${entries.length===1?'entry':'entries'} for ${roommate.name}? This cannot be undone.`)){
+        const previous=S.txs;S.txs=previous.filter(t=>!(t.owner===me&&t.account===roommate.id));
+        if(save()){render();toast(`${roommate.name}'s history deleted.`)}else S.txs=previous;
+      }break}
+    case 'delAllHistory':{
+      const entries=S.txs.filter(t=>t.owner===me);
+      if(!entries.length)return toast('There is no history to delete.');
+      if(confirm(`Delete all ${entries.length} history ${entries.length===1?'entry':'entries'} from your ledger? Roommate names and other people's ledgers will stay. This cannot be undone.`)){
+        const previous=S.txs;S.txs=previous.filter(t=>t.owner!==me);
+        if(save()){render();toast('All your history was deleted.')}else S.txs=previous;
+      }break}
     case 'add':{const v=$('#newName').value.trim();if(!v)return toast('Enter a name.');
       if(S.roommates.some(r=>r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
       S.roommates.push({id:uid(),name:v});if(save())render();break}
