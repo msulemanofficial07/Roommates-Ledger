@@ -168,66 +168,42 @@ document.addEventListener('submit',e=>{
 });
 
 /* ---------- Statements ---------- */
-function periodLabel(period){
-  return 'All time';
-}
-function stData(a,period='all'){
-  const rows=runRows(a);
-  const total=(kind,dir)=>rows.filter(x=>x.t.kind===kind&&(!dir||x.t.dir===dir)).reduce((s,x)=>s+x.t.amount,0);
-  return{rows,net:net(a),lines:[
-    ['Total expenses',total('item')],
-    ['Total payments',total('payment')],
-    ['Expenses you paid',total('item','in')],
-    ['Payments received',total('payment','in')]
-  ],period:periodLabel(period)};
-}
 function fit(c,s,w){if(c.measureText(s).width<=w)return s;while(s.length>1&&c.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…'}
-function pngPages(a,period='all'){
-  const d=stData(a,period),W=1080,P=48,RH=82,PER=10,chunks=[];
-  for(let i=0;i<d.rows.length;i+=PER)chunks.push(d.rows.slice(i,i+PER));
+function pngPages(a){
+  const rows=runRows(a),W=1080,P=48,RH=72,PER=12,chunks=[];
+  for(let i=0;i<rows.length;i+=PER)chunks.push(rows.slice(i,i+PER));
   if(!chunks.length)chunks.push([]);
-  if(chunks[chunks.length-1].length>8)chunks.push([]);
-  const sumH=58+d.lines.length*48+144;
-  return Promise.all(chunks.map((rows,i)=>new Promise((res,rej)=>{
-    const last=i===chunks.length-1,top=390,H=top+(rows.length?58:0)+rows.length*RH+(last?sumH:0)+90;
+  const balance=net(a);
+  return Promise.all(chunks.map((pageRows,i)=>new Promise((res,rej)=>{
+    const last=i===chunks.length-1,headerH=112,tableH=54,footerH=last?124:0;
+    const H=headerH+tableH+pageRows.length*RH+footerH+24;
     const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');if(!c)return rej(new Error('Canvas is unavailable.'));
-    c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,170);
-    c.fillStyle='#fff';c.font='bold 52px Arial,sans-serif';c.fillText('ROOMMATES LEDGER',P,78);
-    c.font='28px Arial,sans-serif';c.fillStyle='#b9cdea';c.fillText('Account statement'+(chunks.length>1?`  •  Page ${i+1} of ${chunks.length}`:''),P,126);
-    c.fillStyle='#14213a';c.font='bold 29px Arial,sans-serif';c.fillText('Roommate: '+nm(a),P,220);
-    c.font='27px Arial,sans-serif';c.fillText('Ledger owner: '+nm(me),P,266);c.fillText('Period: '+d.period,P,308);
-    c.fillStyle='#5b6b85';c.textAlign='right';c.fillText('Date: '+fdate(today()),W-P,266);c.textAlign='left';
-    if(i===0){
-      c.fillStyle='#f2f5fa';c.fillRect(P,330,W-2*P,46);c.font='bold 22px Arial,sans-serif';c.fillStyle='#1b3f6b';
-      c.fillText('EXPENSES '+money(d.lines[0][1]),P+16,360);c.fillText('PAYMENTS '+money(d.lines[1][1]),P+365,360);
-      c.fillText('BALANCE '+fit(c,balText(d.net,a),410),P+700,360);
-    }
-    let y=top;
-    if(rows.length){c.fillStyle='#e8eefb';c.fillRect(0,y,W,58);c.fillStyle='#1b3f6b';c.font='bold 24px Arial,sans-serif';
-      c.fillText('Date',P,y+38);c.fillText('Description',P+190,y+38);c.fillText('Type',P+590,y+38);c.textAlign='right';c.fillText('Amount',850,y+38);c.fillText('Balance',W-P,y+38);c.textAlign='left';y+=58}
-    rows.forEach(({t,b},k)=>{
+    c.fillStyle='#fff';c.fillRect(0,0,W,H);c.fillStyle='#0f2a4a';c.fillRect(0,0,W,headerH);
+    c.fillStyle='#fff';c.font='bold 42px Arial,sans-serif';c.fillText(nm(a),P,70);
+    let y=headerH;c.fillStyle='#e8eefb';c.fillRect(0,y,W,tableH);c.fillStyle='#1b3f6b';c.font='bold 23px Arial,sans-serif';
+    c.fillText('Date',P,y+35);c.fillText('Description',P+190,y+35);c.textAlign='right';c.fillText('Amount',820,y+35);c.fillText('Balance',W-P,y+35);c.textAlign='left';y+=tableH;
+    if(!rows.length){c.fillStyle='#53657d';c.font='23px Arial,sans-serif';c.fillText('No entries yet',P,y+40);y+=RH}
+    pageRows.forEach(({t,b},k)=>{
       if(k%2){c.fillStyle='#f6f8fc';c.fillRect(0,y,W,RH)}
-      c.fillStyle='#14213a';c.font='24px Arial,sans-serif';c.fillText(fdate(t.date),P,y+44);
-      c.font='bold 25px Arial,sans-serif';c.fillText(fit(c,detail(t),370),P+190,y+38);
-      c.fillStyle='#5b6b85';c.font='19px Arial,sans-serif';c.fillText(fit(c,t.notes||'',370),P+190,y+66);
-      c.font='20px Arial,sans-serif';c.fillText(fit(c,typeLabel(t),230),P+590,y+48);
-      c.textAlign='right';c.fillStyle='#14213a';c.font='bold 24px Arial,sans-serif';c.fillText((sgn(t)>0?'+':'−')+money(t.amount),850,y+48);
-      c.fillStyle=b>0?'#15803d':b<0?'#b91c1c':'#5b6b85';c.fillText((b<0?'−':'')+money(b),W-P,y+44);c.textAlign='left';y+=RH});
+      c.fillStyle='#14213a';c.font='22px Arial,sans-serif';c.fillText(fdate(t.date),P,y+44);
+      c.font='bold 23px Arial,sans-serif';c.fillText(fit(c,detail(t),350),P+190,y+43);
+      c.textAlign='right';c.font='bold 22px Arial,sans-serif';c.fillStyle='#14213a';c.fillText((sgn(t)>0?'+':'−')+money(t.amount),820,y+43);
+      c.fillStyle=b>0?'#15803d':b<0?'#b91c1c':'#53657d';c.fillText((b<0?'−':'')+money(b),W-P,y+43);c.textAlign='left';y+=RH;
+    });
     if(last){
-      y+=24;const bh=d.lines.length*48+134;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,bh);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,bh);
-      let yy=y+42;c.font='24px Arial,sans-serif';
-      d.lines.forEach(l=>{c.fillStyle='#14213a';c.textAlign='left';c.fillText(l[0],P+20,yy);c.textAlign='right';c.font='bold 26px Arial,sans-serif';c.fillText(money(l[1]),W-P-20,yy);c.font='26px Arial,sans-serif';yy+=48});
-      c.textAlign='left';c.font='bold 29px Arial,sans-serif';c.fillStyle=d.net>0?'#15803d':d.net<0?'#b91c1c':'#14213a';c.fillText(fit(c,'Balance due: '+balText(d.net,a),W-2*P-40),P+20,yy+28);
+      y+=12;c.fillStyle='#f2f5fa';c.fillRect(P,y,W-2*P,96);c.strokeStyle='#dde4ee';c.strokeRect(P,y,W-2*P,96);
+      c.fillStyle='#14213a';c.textAlign='left';c.font='bold 24px Arial,sans-serif';c.fillText('TOTAL DUE',P+18,y+38);
+      c.fillStyle=balance>0?'#15803d':balance<0?'#b91c1c':'#14213a';c.font='bold 30px Arial,sans-serif';c.textAlign='right';c.fillText(money(balance),W-P-18,y+42);
+      c.textAlign='left';c.fillStyle='#53657d';c.font='20px Arial,sans-serif';c.fillText(balance>0?'They owe you':balance<0?'You owe them':'All paid',P+18,y+72);
     }
-    c.fillStyle='#8a97ad';c.font='20px Arial,sans-serif';c.textAlign='center';c.fillText('Roommates Ledger  •  Personal record',W/2,H-34);
     cv.toBlob(bl=>bl?res(bl):rej(new Error('Could not generate the statement image.')),'image/png');
   })));
 }
-function fileBase(a,period){
-  return `roommates-ledger-${nm(a)}-${periodLabel(period)}`.normalize('NFKD').replace(/[^\w-]+/g,'-').replace(/-+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
+function fileBase(a){
+  return `roommates-ledger-${nm(a)}`.normalize('NFKD').replace(/[^\w-]+/g,'-').replace(/-+/g,'-').replace(/^-+|-+$/g,'').toLowerCase();
 }
-async function statementImages(a=ui.acct,period='all'){
-  const blobs=await pngPages(a,period),base=fileBase(a,period);
+async function statementImages(a=ui.acct){
+  const blobs=await pngPages(a),base=fileBase(a);
   return blobs.map((b,i)=>new File([b],`${base}${blobs.length>1?`-${i+1}`:''}.png`,{type:'image/png'}));
 }
 function downloadFiles(files){
@@ -242,9 +218,9 @@ function shareFallback(files){
   toast('Image downloaded. Attach it in WhatsApp to share.');
 }
 async function shareAccount(){
-  const a=ui.acct,period='all';
+  const a=ui.acct;
   try{
-    const files=await statementImages(a,period);
+    const files=await statementImages(a);
     let supported=false;
     try{supported=typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files})}catch(e){supported=false}
     if(!supported){shareFallback(files);return}
