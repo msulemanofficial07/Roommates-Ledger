@@ -48,7 +48,7 @@ input[type=number],input[type=date]{direction:ltr;text-align:left}
 .tx-meta{color:var(--mut);font-size:12px;margin-top:3px}.tx-actions{display:flex;gap:7px;margin-top:7px}
 .mut{color:var(--mut);font-size:13px}.tag{font-size:12px;background:#e8eefb;color:var(--navy);border-radius:6px;padding:2px 7px}
 .note{background:#fff8e1;border:1px solid #f1d98a;border-radius:10px;padding:10px;font-size:13px}
-.bottom-nav{position:fixed;inset:auto 0 0;z-index:10;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+.bottom-nav{position:fixed;inset:auto 0 0;z-index:10;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
 .bottom-nav button{min-height:42px;padding:6px 4px;background:#fff;color:var(--navy);border-color:transparent;font-size:14px}
 .bottom-nav button.on{background:#e8f0fb;color:var(--navy);border-color:#c9d9ef}
 .ov{position:fixed;inset:0;background:rgba(10,20,40,.58);display:flex;align-items:flex-end;justify-content:center;z-index:20}
@@ -107,9 +107,9 @@ function render(){
   const app=$('#app');
   if(!me){
     app.innerHTML=`<header><h1>Roommates Ledger</h1></header><main><h2>Who are you?</h2><p class="intro">Tap your name to open your ledger.</p><div class="profiles">${S.roommates.map(r=>`<button class="profile" data-a="pick" data-id="${r.id}">${esc(r.name)}</button>`).join('')}</div></main>`;return}
-  const tabs=[['home','Dashboard'],['mates','Roommates']];
+  const tabs=[['home','Dashboard'],['mates','Roommates'],['history','History']];
   let body='';
-  if(ui.view==='home')body=home();else if(ui.view==='acct')body=acct();else body=mates();
+  if(ui.view==='home')body=home();else if(ui.view==='acct')body=acct();else if(ui.view==='history')body=historyView();else body=mates();
   app.innerHTML=`<header><h1>Roommates Ledger</h1><span class="who">${esc(nm(me))}</span><button class="sm" data-a="switch">Switch</button></header>
   <main>${body}</main><nav class="bottom-nav">${tabs.map(t=>`<button class="${ui.view===t[0]||(ui.view==='acct'&&t[0]==='home')?'on':''}" data-a="nav" data-v="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
   if(ui.view==='acct')renderList();
@@ -133,7 +133,6 @@ function acct(){
   <div class="actions"><button data-a="form" data-k="item" data-acct="${a}" data-dir="in">+ Add expense</button><button class="alt" data-a="form" data-k="payment" data-acct="${a}">Add advance / payment</button></div>
   <button class="alt" style="width:100%;margin-bottom:8px" data-a="form" data-k="item" data-acct="${a}" data-dir="out">Record purchase for you</button>
   <button class="alt" style="width:100%" data-a="shareAccount">Share image on WhatsApp</button>
-  <button class="warn" style="width:100%;margin-top:8px" data-a="delHistory" data-id="${a}">Delete this roommate's history</button>
   <h3>Recent activity</h3><div id="list"></div>`;
 }
 function renderList(){
@@ -141,9 +140,14 @@ function renderList(){
   $('#list').innerHTML=rows.length?rows.map(({t,b})=>`<div class="tx-card"><div class="tx-top"><b>${esc(detail(t))}</b><span class="tx-amount ${sgn(t)>0?'pos':'neg'}">${sgn(t)>0?'+':'−'}${money(t.amount)}</span></div><div class="tx-meta">${fdate(t.date)}${t.kind==='payment'?' · '+ftime(t.created):''} · Balance ${b<0?'−':''}${money(b)}</div><div class="tx-actions"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button><button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></div></div>`).join(''):'<p class="mut">No entries yet. Add an expense to get started.</p>';
 }
 function mates(){
-  return `<h2>Roommates</h2><p class="intro">Open a roommate ledger or manage names.</p><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b>${r.id!==me?`<button class="alt sm" data-a="open" data-id="${r.id}">Open</button><button class="warn sm" data-a="delHistory" data-id="${r.id}">Delete history</button>`:''}<button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
-  <label for="newName">Add a roommate</label><div class="row" style="margin-top:6px"><input class="grow" id="newName" placeholder="Name"><button data-a="add">Add</button></div></div>
-  <div class="card"><p class="intro">This only deletes your ledger entries. Roommate names and other people's ledgers stay safe.</p><button class="warn" style="width:100%" data-a="delAllHistory">Delete all my history</button></div>`;
+  return `<h2>Roommates</h2><p class="intro">Open a roommate ledger or manage names.</p><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">You</span>':''}</b>${r.id!==me?`<button class="alt sm" data-a="open" data-id="${r.id}">Open</button>`:''}<button class="alt sm" data-a="ren" data-id="${r.id}">Rename</button>${r.id!==me?`<button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button>`:''}</div>`).join('')}
+  <label for="newName">Add a roommate</label><div class="row" style="margin-top:6px"><input class="grow" id="newName" placeholder="Name"><button data-a="add">Add</button></div></div>`;
+}
+function historyView(){
+  const entries=S.txs.filter(t=>t.owner===me);
+  return `<h2>History</h2><p class="intro">Delete saved records for one roommate or clear your full history. Each deletion asks for confirmation twice.</p>
+  <div class="card"><h3 style="margin-top:0">By roommate</h3>${others().map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}</b><span class="mut">${mine(r.id).length} entries</span><button class="warn sm" data-a="delHistory" data-id="${r.id}">Delete history</button></div>`).join('')||'<p class="mut">No roommates found.</p>'}</div>
+  <div class="card"><h3 style="margin-top:0">All history</h3><p class="intro">${entries.length} entries in your ledger. Roommate names and other people's ledgers are not deleted.</p><button class="warn" style="width:100%" data-a="delAllHistory">Delete all my history</button></div>`;
 }
 
 /* ---------- Forms ---------- */
@@ -267,14 +271,14 @@ function act(a,d){
       if(!roommate||roommate.id===me)return toast('Choose a valid roommate.');
       const entries=S.txs.filter(t=>t.owner===me&&t.account===roommate.id);
       if(!entries.length)return toast(`No history to delete for ${roommate.name}.`);
-      if(confirm(`Delete all ${entries.length} history ${entries.length===1?'entry':'entries'} for ${roommate.name}? This cannot be undone.`)){
+      if(confirm(`Delete all ${entries.length} history ${entries.length===1?'entry':'entries'} for ${roommate.name}?`)&&confirm(`Final confirmation: permanently delete ${roommate.name}'s history? This cannot be undone.`)){
         const previous=S.txs;S.txs=previous.filter(t=>!(t.owner===me&&t.account===roommate.id));
         if(save()){render();toast(`${roommate.name}'s history deleted.`)}else S.txs=previous;
       }break}
     case 'delAllHistory':{
       const entries=S.txs.filter(t=>t.owner===me);
       if(!entries.length)return toast('There is no history to delete.');
-      if(confirm(`Delete all ${entries.length} history ${entries.length===1?'entry':'entries'} from your ledger? Roommate names and other people's ledgers will stay. This cannot be undone.`)){
+      if(confirm(`Delete all ${entries.length} history ${entries.length===1?'entry':'entries'} from your ledger?`)&&confirm("Final confirmation: permanently delete ALL your history? Roommate names and other people's ledgers stay. This cannot be undone.")){
         const previous=S.txs;S.txs=previous.filter(t=>t.owner!==me);
         if(save()){render();toast('All your history was deleted.')}else S.txs=previous;
       }break}
