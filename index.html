@@ -37,6 +37,7 @@ h2{font-size:19px;line-height:1.3;margin:2px 0 6px}h3{font-size:16px;margin:14px
 .stat-button[class*="room-"]{background:var(--room-bg);border-color:var(--room-border)}
 .account-view[class*="room-"] .account-balance,.account-view[class*="room-"] .advance-stat{background:var(--room-bg);border-color:var(--room-border)}
 .account-view[class*="room-"] .account-balance .balance-value,.account-view[class*="room-"] .advance-stat b{color:var(--room-ink)}
+.account-view[class*="room-"]>h2:not(:first-child){padding:8px 10px;background:var(--room-bg);border:1px solid var(--room-border);border-radius:9px}
 .stat-button:hover{transform:translateY(-1px);box-shadow:0 5px 14px #29456b20}
 .stat-button small{font-size:11px;line-height:1.2}
 .stat-button b{font-size:16px}
@@ -110,6 +111,7 @@ let ui={view:'home',acct:null};
 let backPressedAt=0;
 
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){alert('Could not save your data. Free some browser storage and try again.');return false}}
+function saveOrRollback(rollback){if(save())return true;rollback();return false}
 const nm=id=>{const r=S.roommates.find(x=>x.id===id);return r?r.name:'Unknown'};
 function roomTone(id){
   const name=nm(id).toLowerCase();
@@ -147,11 +149,12 @@ function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):(t.pa
 function entryActions(acctId,expenseDir='in'){
   const context=acctId?` data-acct="${esc(acctId)}"`:'';
   const canPay=acctId?hasPaymentDue(acctId):others().some(r=>hasPaymentDue(r.id));
-  return `<div class="actions entry-actions"><button data-a="form" data-k="item"${context} data-dir="${expenseDir}">Add Expense</button><button class="alt" data-a="form" data-k="payment" data-mode="payment"${context}${canPay?'':' disabled title="Add an expense first."'}>Add Payment</button><button class="alt" data-a="form" data-k="payment" data-mode="advance"${context}>Add Advance Payment</button></div>`;
+  return `<div class="actions entry-actions"><button data-a="form" data-k="item"${context} data-dir="${expenseDir}">Add Expense</button><button class="alt" data-a="form" data-k="payment" data-mode="payment"${context}${canPay?'':' disabled title="Add an expense first."'}>Add Payment</button><button class="alt" data-a="form" data-k="payment" data-mode="advance"${context}>Add Advance Payment</button></div>${canPay?'':'<p class="mut payment-help">Add an expense first to enable Add Payment.</p>'}`;
 }
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
 function modal(h){closeModal();const o=document.createElement('div');o.className='ov';o.id='modal';o.innerHTML='<div class="sheet">'+h+'</div>';o.addEventListener('mousedown',e=>{if(e.target===o)closeModal()});document.body.appendChild(o)}
 function closeModal(){const o=$('#modal');if(o)o.remove()}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#modal'))closeModal()});
 function keepAppHistory(){history.pushState({roommatesLedger:true},'')}
 window.addEventListener('popstate',()=>{
   if($('#modal')){closeModal();backPressedAt=0;keepAppHistory();return}
@@ -205,7 +208,7 @@ function mates(){
 function historyView(){
   const entries=S.txs.filter(t=>t.owner===me);
   return `<h2>History</h2><p class="intro">Delete saved records for one roommate or clear your full history. Each deletion asks for confirmation twice.</p>${entryActions()}
-  <div class="card"><h3 style="margin-top:0">By roommate</h3>${others().map(r=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}</b><span class="mut">${mine(r.id).length} entries</span><button class="warn sm" data-a="delHistory" data-id="${r.id}">Delete history</button></div>`).join('')||'<p class="mut">No roommates found.</p>'}</div>
+  <div class="card"><h3 style="margin-top:0">By roommate</h3>${others().map(r=>{const count=mine(r.id).length;return `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}</b><span class="mut">${count} entries</span><button class="warn sm" data-a="delHistory" data-id="${r.id}" ${count?'':'disabled'}>Delete history</button></div>`}).join('')||'<p class="mut">No roommates found.</p>'}</div>
   <div class="card"><h3 style="margin-top:0">All history</h3><p class="intro">${entries.length} entries in your ledger. Roommate names and other people's ledgers are not deleted.</p><button class="warn" style="width:100%" data-a="delAllHistory">Delete all my history</button></div>`;
 }
 
@@ -243,9 +246,10 @@ document.addEventListener('submit',e=>{
   if(kind==='item'&&!validDate(v.date))return toast('The date is invalid.');
   if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('This entry is not available.');
   const now=Date.now(),dir=kind==='item'?f.dataset.dir:(id?S.txs.find(t=>t.id===id&&t.owner===me).dir:'in');
+  const previousTxs=JSON.parse(JSON.stringify(S.txs));
   if(id){const existing=S.txs.find(t=>t.id===id&&t.owner===me);Object.assign(existing,{account:accounts[0],dir,amount:amt,date:kind==='payment'?today():v.date,created:kind==='payment'?now:existing.created,notes:'',kind,paymentMode:kind==='payment'?paymentMode:undefined,desc:kind==='item'?(v.desc||'').trim()||'Expense':'Payment',qty:(v.qty||'').trim(),method:'',updated:now})}
   else accounts.forEach(account=>S.txs.push({id:uid(),owner:me,created:now,updated:now,account,dir,amount:amt,date:kind==='payment'?today():v.date,notes:'',kind,paymentMode:kind==='payment'?paymentMode:undefined,desc:kind==='item'?(v.desc||'').trim()||'Expense':paymentMode==='advance'?'Advance payment':'Payment',qty:(v.qty||'').trim(),method:''}));
-  if(!save())return;closeModal();toast('Saved.');render();
+  if(!saveOrRollback(()=>{S.txs=previousTxs}))return;closeModal();toast('Saved.');render();
 });
 
 /* ---------- Statements ---------- */
@@ -329,7 +333,7 @@ function act(a,d){
     case 'shareAccount':shareAccount();break;
     case 'close':closeModal();break;
     case 'del':{const t=S.txs.find(x=>x.id===d.id);
-      if(confirm(`Delete ${detail(t)} for ${money(t.amount)}? This cannot be undone.`)){S.txs=S.txs.filter(x=>x.id!==d.id);if(save()){render();toast('Entry deleted.')}}break}
+      if(t&&confirm(`Delete ${detail(t)} for ${money(t.amount)}? This cannot be undone.`)){const previous=S.txs;S.txs=S.txs.filter(x=>x.id!==d.id);if(saveOrRollback(()=>{S.txs=previous})){render();toast('Entry deleted.')}}break}
     case 'delHistory':{
       const roommate=S.roommates.find(r=>r.id===d.id);
       if(!roommate||roommate.id===me)return toast('Choose a valid roommate.');
@@ -348,16 +352,16 @@ function act(a,d){
       }break}
     case 'add':{const v=$('#newName').value.trim();if(!v)return toast('Enter a name.');
       if(S.roommates.some(r=>r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
-      S.roommates.push({id:uid(),name:v});if(save())render();break}
+      S.roommates.push({id:uid(),name:v});if(saveOrRollback(()=>{S.roommates.pop()}))render();break}
     case 'ren':{const r=S.roommates.find(x=>x.id===d.id);
       modal(`<h2>Rename roommate</h2><label>New name<input id="rn" value="${esc(r.name)}" maxlength="40"></label><div class="actions"><button data-a="renOk" data-id="${r.id}">Save</button><button class="alt" data-a="close">Cancel</button></div>`);break}
     case 'renOk':{const v=$('#rn').value.trim();if(!v)return toast('Enter a name.');
       if(S.roommates.some(r=>r.id!==d.id&&r.name.toLowerCase()===v.toLowerCase()))return toast('That name already exists.');
-      S.roommates.find(r=>r.id===d.id).name=v;if(save()){closeModal();render()}break}
+      const roommate=S.roommates.find(r=>r.id===d.id),previousName=roommate.name;roommate.name=v;if(saveOrRollback(()=>{roommate.name=previousName})){closeModal();render()}break}
     case 'rem':{if(S.txs.some(t=>t.owner===d.id||t.account===d.id))return alert('This roommate has ledger entries and cannot be removed.');
       if(d.id===me)return alert('Switch to another user first.');
       if(S.roommates.length<=2)return alert('Keep at least two roommates.');
-      if(confirm(`Remove ${nm(d.id)}?`)){S.roommates=S.roommates.filter(r=>r.id!==d.id);if(save())render()}break}
+      if(confirm(`Remove ${nm(d.id)}?`)){const previous=S.roommates;S.roommates=previous.filter(r=>r.id!==d.id);if(saveOrRollback(()=>{S.roommates=previous}))render()}break}
   }
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset)});
