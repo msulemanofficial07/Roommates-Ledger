@@ -129,7 +129,7 @@ function render(){
   const tabs=[['home','Dashboard'],['mates','Roommates'],['history','History']];
   let body='';
   if(ui.view==='home')body=home();else if(ui.view==='acct')body=acct();else if(ui.view==='history')body=historyView();else body=mates();
-  app.innerHTML=`<header><h1>Roommates Ledger</h1><span class="who">${esc(nm(me))}</span><button class="sm" data-a="switch">Switch</button></header>
+  app.innerHTML=`<header><h1>Roommates Ledger</h1><span class="who">${esc(nm(me))}</span></header>
   <main>${body}</main><nav class="bottom-nav">${tabs.map(t=>`<button class="${ui.view===t[0]||(ui.view==='acct'&&t[0]==='home')?'on':''}" data-a="nav" data-v="${t[0]}">${t[1]}</button>`).join('')}</nav>`;
   if(ui.view==='acct')renderList();
 }
@@ -282,7 +282,6 @@ async function shareAccount(){
 function act(a,d){
   switch(a){
     case 'pick':me=d.id;try{localStorage.setItem(UK,me)}catch(e){}ui.view='home';render();break;
-    case 'switch':me=null;try{localStorage.removeItem(UK)}catch(e){}render();break;
     case 'nav':ui.view=d.v;render();break;
     case 'open':ui.acct=d.id;ui.view='acct';render();break;
     case 'form':form(d.k,d.id,d.acct,d.dir,d.mode);break;
