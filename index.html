@@ -43,19 +43,10 @@ tr.click{cursor:pointer}tr.click:hover{background:#f6f9ff}
 .sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:18px}
 @media(min-width:640px){.ov{align-items:center}.sheet{border-radius:14px}}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;z-index:30;max-width:90%}
-.imgs img{width:100%;border:1px solid var(--line);border-radius:8px;margin:8px 0 4px}
-.export-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin-top:12px}
-.export-grid button{width:100%}.export-period{margin-top:8px}
-#printArea{display:none}
-@media print{body>*:not(#printArea){display:none!important}#printArea{display:block;color:#000}
-#printArea h1{color:#0f2a4a;margin:0 0 4px}#printArea table{font-size:13px}#printArea thead{display:table-header-group}
-#printArea tr{break-inside:avoid;page-break-inside:avoid}#printArea .box{border:1px solid #999;padding:10px;margin-top:12px}
-@page{margin:14mm}}
 </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="printArea"></div>
 <script>
 const KEY='roommates_ledger_v1',UK='roommates_ledger_user';
 const $=s=>document.querySelector(s);
@@ -129,7 +120,7 @@ function acct(){
   return `<div class="row"><button class="alt sm" data-a="nav" data-v="home">← Back</button><h2 class="grow" style="margin:0">${esc(nm(a))}</h2></div>
   <div class="card" style="margin-top:12px"><div class="${balCls(n)}" style="font-size:24px">${balText(n,a)}</div><div id="sums" class="mut"></div>
   <div class="row" style="margin-top:12px"><button data-a="form" data-k="item" data-acct="${a}">+ Item</button><button class="alt" data-a="form" data-k="payment" data-acct="${a}">+ Payment</button></div>
-  <div class="row" style="margin-top:8px"><button class="alt" data-a="exportPanel">Export / Share Account</button><button class="alt sm" data-a="wa" data-w="sum">WhatsApp summary</button></div></div>
+  <div class="row" style="margin-top:8px"><button class="alt" data-a="shareAccount">Share image on WhatsApp</button></div></div>
   ${filters()}`;
 }
 // Shared filter + search card
@@ -152,7 +143,7 @@ function renderList(){
   const q=ui.q.trim().toLowerCase();
   const rows=rr.filter(x=>inRange(x.t)&&(!q||(detail(x.t)+' '+(x.t.notes||'')+' '+typeLabel(x.t)+' '+nm(x.t.account)).toLowerCase().includes(q))).reverse();
   if($('#sums'))$('#sums').innerHTML=sumLines(ui.acct).map(l=>`${l[0]}: <b>${money(l[1])}</b>`).join('<br>');
-  $('#list').innerHTML=rows.length?`<table><tr><th>Date</th><th>Details</th><th class="n">Amount</th><th class="n">Balance</th><th></th></tr>${rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td><b>${all?esc(nm(t.account))+': ':''}${esc(detail(t))}</b><br><span class="tag">${typeLabel(t)}</span> <span class="mut">${esc(t.notes||'')}</span></td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n ${balCls(b)}">${b<0?'−':''}${money(b)}</td><td class="n"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button> <button class="alt sm" data-a="wa" data-w="tx" data-id="${t.id}">WhatsApp</button> <button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mut">No transactions found. Add a purchase or repayment to get started.</p>';
+  $('#list').innerHTML=rows.length?`<table><tr><th>Date</th><th>Details</th><th class="n">Amount</th><th class="n">Balance</th><th></th></tr>${rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td><b>${all?esc(nm(t.account))+': ':''}${esc(detail(t))}</b><br><span class="tag">${typeLabel(t)}</span> <span class="mut">${esc(t.notes||'')}</span></td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n ${balCls(b)}">${b<0?'−':''}${money(b)}</td><td class="n"><button class="alt sm" data-a="form" data-id="${t.id}">Edit</button> <button class="warn sm" data-a="del" data-id="${t.id}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mut">No transactions found. Add a purchase or repayment to get started.</p>';
 }
 function mates(){
   return `<h2>Roommates</h2><div class="card">${S.roommates.map(r=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--line)"><b class="grow">${esc(r.name)}${r.id===me?' <span class="tag">you</span>':''}</b><button class="alt sm" data-a="ren" data-id="${r.id}">Edit name</button><button class="warn sm" data-a="rem" data-id="${r.id}">Remove</button></div>`).join('')}
@@ -170,16 +161,18 @@ function form(kind,id,acctId){
   const t=id?S.txs.find(x=>x.id===id&&x.owner===me):null;if(id&&!t)return toast('This transaction is not available in the current ledger.');
   if(t)kind=t.kind;
   if(!others().length)return toast('Add another roommate first.');
-  const it=kind==='item',sel=t?t.account:(acctId||ui.acct);
-  const dirs=it?[['in','I provided it — they owe me'],['out','They provided it — I owe them']]:[['in','They paid me'],['out','I paid them']];
+  const it=kind==='item',sel=t?t.account:(acctId||(ui.view==='acct'?ui.acct:null));
+  const balance=sel?net(sel,t?t.id:null):null;
+  if(!it&&!t&&sel&&balance===0)return toast('There is no outstanding balance to pay.');
   modal(`<h2>${t?'Edit':'Add'} ${it?'item':'payment'}</h2><form id="f" data-kind="${kind}" data-id="${id||''}">
-  <label>Roommate<select name="account">${others().map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label>
-  <label>${it?'Who provided it?':'Direction'}<select name="dir">${dirs.map(d=>`<option value="${d[0]}" ${t&&t.dir===d[0]?'selected':''}>${d[1]}</option>`).join('')}</select></label>
-  ${it?`<label>Item name<input name="desc" required maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Roti"></label>`:`<label>Payment method (optional)<input name="method" maxlength="40" value="${esc(t?t.method:'')}" placeholder="Cash, JazzCash, Easypaisa…"></label>`}
+  ${it||!sel?`<label>Roommate<select name="account">${others().map(r=>`<option value="${r.id}" ${r.id===sel?'selected':''}>${esc(r.name)}</option>`).join('')}</select></label>`:`<input type="hidden" name="account" value="${esc(sel)}">`}
+  ${it?`<label>Who provided it?<select name="dir"><option value="in" ${t&&t.dir==='in'?'selected':''}>I provided it — they owe me</option><option value="out" ${t&&t.dir==='out'?'selected':''}>They provided it — I owe them</option></select></label>
+  <label>Item name<input name="desc" required maxlength="80" value="${esc(t?t.desc:'')}" placeholder="e.g. Roti"></label>`:''}
   <label>Amount (PKR)<input name="amount" type="number" inputmode="decimal" step="0.01" min="0.01" max="999999999.99" required value="${t?t.amount/100:''}"></label>
-  <label>Date<input name="date" type="date" required value="${t?t.date:today()}"></label>
+  ${!it&&balance!==null?`<p class="mut">Outstanding balance: <b>${money(Math.abs(balance))}</b></p>`:''}
+  ${it?`<label>Date<input name="date" type="date" required value="${t?t.date:today()}"></label>`:`<input type="hidden" name="date" value="${t?t.date:today()}">`}
   ${it?`<label>Quantity (optional)<input name="qty" maxlength="30" value="${esc(t?t.qty:'')}" placeholder="e.g. 4 pieces"></label>`:''}
-  <label>Notes (optional)<textarea name="notes" rows="2" maxlength="300">${esc(t?t.notes:'')}</textarea></label>
+  ${it?`<label>Notes (optional)<textarea name="notes" rows="2" maxlength="300">${esc(t?t.notes:'')}</textarea></label>`:''}
   <div class="row" style="margin-top:14px"><button class="grow" type="submit">Save</button><button class="alt grow" type="button" data-a="close">Cancel</button></div></form>`);
 }
 document.addEventListener('submit',e=>{
@@ -189,15 +182,18 @@ document.addEventListener('submit',e=>{
   if(!Number.isSafeInteger(amt)||amt<=0)return toast('Enter a valid amount greater than zero (up to Rs. 999,999,999.99).');
   if(v.account===me||!S.roommates.some(r=>r.id===v.account))return toast('Choose a different roommate.');
   if(!validDate(v.date))return toast('Choose a valid transaction date.');
-  if(!['item','payment'].includes(kind)||!['in','out'].includes(v.dir))return toast('Choose a valid transaction type and direction.');
+  if(!['item','payment'].includes(kind)||(kind==='item'&&!['in','out'].includes(v.dir)))return toast('Choose a valid transaction type and direction.');
   if(kind==='item'&&!v.desc.trim())return toast('Enter an item name.');
   if(id&&!S.txs.some(t=>t.id===id&&t.owner===me))return toast('This transaction is not available in the current ledger.');
+  let dir=v.dir;
   if(kind==='payment'){
     const n=net(v.account,id||null);
-    if(v.dir==='in'){if(amt>Math.max(n,0))return toast(n>0?`They only owe you ${money(n)}. Payment is too high.`:'They owe you nothing right now.')}
-    else if(amt>Math.max(-n,0))return toast(-n>0?`You only owe them ${money(-n)}. Payment is too high.`:'You owe them nothing right now.');
+    if(n===0)return toast('There is no outstanding balance to pay.');
+    dir=n>0?'in':'out';
+    const outstanding=Math.abs(n);
+    if(amt>outstanding)return toast(`The outstanding balance is ${money(outstanding)}. Payment is too high.`);
   }
-  const now=Date.now(),data={account:v.account,dir:v.dir,amount:amt,date:v.date,notes:(v.notes||'').trim(),kind,desc:kind==='item'?v.desc.trim():'Payment',qty:(v.qty||'').trim(),method:(v.method||'').trim()};
+  const now=Date.now(),data={account:v.account,dir,amount:amt,date:v.date,notes:kind==='item'?(v.notes||'').trim():'',kind,desc:kind==='item'?v.desc.trim():'Payment',qty:kind==='item'?(v.qty||'').trim():'',method:''};
   if(id){Object.assign(S.txs.find(t=>t.id===id&&t.owner===me),data,{updated:now})}
   else S.txs.push(Object.assign({id:uid(),owner:me,created:now,updated:now},data));
   if(!save())return;closeModal();toast('Saved');render();
@@ -221,29 +217,6 @@ function stData(a,period='all'){
     ['Total amount charged to account',total('item','in')],
     ['Total amount repaid to ledger owner',total('payment','in')]
   ],period:periodLabel(period)};
-}
-function exportPanel(){
-  const filtered=ui.range!=='all';
-  modal(`<h2>Export / Share Account</h2><p><b>${esc(nm(ui.acct))}</b> — choose the statement period and an export option.</p>
-  <label class="export-period">Statement period<select id="exportPeriod"><option value="all">All-time statement</option><option value="filtered" ${filtered?'selected':''} ${filtered?'':'disabled'}>Current filtered period (${esc(periodLabel('filtered'))})</option></select></label>
-  <div class="export-grid">
-  <button data-a="downloadPng">PNG Image</button><button data-a="downloadPdf">PDF Document</button>
-  <button data-a="sharePng">Share Image on WhatsApp</button><button data-a="sharePdf">Share PDF on WhatsApp</button>
-  <button class="alt" data-a="copySummary">Copy Account Summary</button><button class="alt" data-a="printStatement">Print Statement</button>
-  </div><p class="mut" role="status">Statements include only this roommate account. For WhatsApp file sharing, select WhatsApp in your device's share sheet.</p>
-  <div class="row" style="margin-top:12px"><button class="alt grow" data-a="close">Close</button></div>`);
-}
-function selectedPeriod(){return $('#exportPeriod')?$('#exportPeriod').value:'all'}
-function pdf(a=ui.acct,period='all'){
-  const d=stData(a,period);
-  $('#printArea').innerHTML=`<h1>ROOMMATES LEDGER</h1><p><b>Account Statement</b> — ${esc(d.period)}</p><p>Ledger owner: <b>${esc(nm(me))}</b><br>Account holder: <b>${esc(nm(a))}</b><br>Generated: ${fdate(today())}<br>Current outstanding: <b>${esc(balText(d.net,a))}</b></p>
-  <table><thead><tr><th>Date</th><th>Description</th><th>Type</th><th class="n">Amount</th><th class="n">Balance</th></tr></thead><tbody>${d.rows.map(({t,b})=>`<tr><td>${fdate(t.date)}</td><td>${esc(detail(t))}${t.notes?'<br><i>'+esc(t.notes)+'</i>':''}</td><td>${typeLabel(t)}</td><td class="n">${sgn(t)>0?'+':'−'}${money(t.amount)}</td><td class="n">${b<0?'−':''}${money(b)}</td></tr>`).join('')}</tbody></table>
-  <div class="box">${d.lines.map(l=>`${l[0]}: <b>${money(l[1])}</b>`).join('<br>')}<br><br><b style="font-size:18px">Remaining balance: ${balText(d.net,a)}</b></div>
-  <p style="font-size:12px;margin-top:14px">Generated by Roommates Ledger. This is a personal record kept on one device.</p>`;
-  return d;
-}
-function printStatement(a=ui.acct,period='all'){
-  pdf(a,period);toast('Use your browser’s print dialog to print or save as PDF.');setTimeout(()=>window.print(),300);
 }
 function fit(c,s,w){if(c.measureText(s).width<=w)return s;while(s.length>1&&c.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…'}
 function pngPages(a,period='all'){
@@ -290,47 +263,9 @@ function pngPages(a,period='all'){
 function fileBase(a,period){
   return `roommates-ledger-${nm(a)}-${periodLabel(period)}`.normalize('NFKD').replace(/[^\w-]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
 }
-async function statementFiles(type,a=ui.acct,period='all'){
+async function statementImages(a=ui.acct,period='all'){
   const blobs=await pngPages(a,period),base=fileBase(a,period);
-  if(type==='png')return blobs.map((b,i)=>new File([b],`${base}${blobs.length>1?`-${i+1}`:''}.png`,{type:'image/png'}));
-  const jpegPages=await Promise.all(blobs.map(blob=>new Promise((resolve,reject)=>{
-    const url=URL.createObjectURL(blob),img=new Image();
-    img.onload=()=>{
-      try{
-        const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
-        const ctx=c.getContext('2d');if(!ctx)throw new Error('Canvas is unavailable.');
-        ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0);
-        const data=c.toDataURL('image/jpeg',.94).split(',')[1],raw=atob(data),bytes=new Uint8Array(raw.length);
-        for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
-        resolve({bytes,width:c.width,height:c.height});
-      }catch(e){reject(e)}finally{URL.revokeObjectURL(url)}
-    };
-    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not prepare a PDF statement page.'))};
-    img.src=url;
-  })));
-  const ascii=s=>new TextEncoder().encode(s),parts=[],offsets=[0];let length=0;
-  const add=bytes=>{parts.push(bytes);length+=bytes.length};
-  add(ascii('%PDF-1.4\n'));
-  const pageCount=jpegPages.length,objectCount=2+pageCount*3;
-  const objects=new Array(objectCount+1);
-  objects[1]=ascii('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
-  objects[2]=ascii(`2 0 obj\n<< /Type /Pages /Kids [${jpegPages.map((_,i)=>`${3+i*3} 0 R`).join(' ')}] /Count ${pageCount} >>\nendobj\n`);
-  jpegPages.forEach((p,i)=>{
-    const pageId=3+i*3,imageId=pageId+1,contentId=pageId+2;
-    const scale=Math.min(612/p.width,744/p.height),w=p.width*scale,h=p.height*scale,x=(612-w)/2,y=(792-h)/2;
-    const stream=ascii(`q\n${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm\n/Im0 Do\nQ\n`);
-    objects[pageId]=ascii(`${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im0 ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`);
-    objects[imageId]={prefix:ascii(`${imageId} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${p.width} /Height ${p.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.bytes.length} >>\nstream\n`),image:p.bytes,suffix:ascii('\nendstream\nendobj\n')};
-    objects[contentId]=ascii(`${contentId} 0 obj\n<< /Length ${stream.length} >>\nstream\n${new TextDecoder().decode(stream)}endstream\nendobj\n`);
-  });
-  for(let i=1;i<=objectCount;i++){
-    offsets[i]=length;
-    const obj=objects[i];
-    if(obj.prefix){add(obj.prefix);add(obj.image);add(obj.suffix)}else add(obj);
-  }
-  const xrefOffset=length;
-  add(ascii(`xref\n0 ${objectCount+1}\n0000000000 65535 f \n${offsets.slice(1).map(o=>`${String(o).padStart(10,'0')} 00000 n \n`).join('')}trailer\n<< /Size ${objectCount+1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`));
-  return [new File([new Blob(parts,{type:'application/pdf'})],`${fileBase(a,period)}.pdf`,{type:'application/pdf'})];
+  return blobs.map((b,i)=>new File([b],`${base}${blobs.length>1?`-${i+1}`:''}.png`,{type:'image/png'}));
 }
 function downloadFiles(files){
   files.forEach((file,i)=>setTimeout(()=>{
@@ -339,64 +274,26 @@ function downloadFiles(files){
     setTimeout(()=>URL.revokeObjectURL(url),30000);
   },i*350));
 }
-function shareFallback(files,type,period){
+function shareFallback(files){
   downloadFiles(files);
-  const isImage=type==='png',label=isImage?'image':'PDF';
-  modal(`<h2>${isImage?'Image':'PDF'} sharing unavailable</h2><p role="status">This browser/device cannot share ${label} files directly. The ${label} ${files.length>1?'pages are':'file is'} being downloaded. Attach ${files.length>1?'the downloaded pages':'the downloaded file'} in WhatsApp manually.</p>
-  <p class="mut">Statement for ${esc(nm(ui.acct))} · ${esc(periodLabel(period))}</p>
-  <div class="row"><button class="alt grow" data-a="wa" data-w="sum" data-period="${esc(period)}">Share account summary by WhatsApp</button></div>
-  <div class="imgs">${files.map(f=>`<a class="btn" style="display:inline-block;text-decoration:none;margin:4px" download="${esc(f.name)}" href="${URL.createObjectURL(f)}">Download ${esc(f.name)}</a>`).join('')}</div>
-  <div class="row" style="margin-top:12px"><button class="alt grow" data-a="close">Close</button></div>`);
+  toast('Image downloaded. Attach it in WhatsApp to share.');
 }
-async function exportAction(action){
-  const a=ui.acct,period=selectedPeriod(),type=action.includes('Pdf')?'pdf':'png';
+async function shareAccount(){
+  const a=ui.acct,period=ui.range==='all'?'all':'filtered';
   try{
-    const files=await statementFiles(type,a,period);
-    if(action==='downloadPng'||action==='downloadPdf'){
-      downloadFiles(files);toast(`${type==='png'?'PNG image':'PDF statement'} downloaded.`);return;
-    }
-    if(action==='sharePng'||action==='sharePdf'){
-      let supported=false;
-      try{supported=typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files})}catch(e){supported=false}
-      if(!supported){shareFallback(files,type,period);return}
-      try{
-        await navigator.share({files,title:`Roommates Ledger — ${nm(a)} statement`});
-        toast('Share sheet opened. Select WhatsApp to send the statement.');
-      }catch(e){
-        if(e.name==='AbortError')return;
-        shareFallback(files,type,period);
-      }
+    const files=await statementImages(a,period);
+    let supported=false;
+    try{supported=typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files})}catch(e){supported=false}
+    if(!supported){shareFallback(files);return}
+    try{
+      await navigator.share({files,title:`Roommates Ledger — ${nm(a)} statement`});
+      toast('Choose WhatsApp to share the statement image.');
+    }catch(e){
+      if(e.name==='AbortError')return;
+      shareFallback(files);
     }
   }catch(e){alert(e.message||'Could not generate the account statement.')}
 }
-async function copySummary(){
-  const a=ui.acct,d=stData(a,selectedPeriod()),summary=`ROOMMATES LEDGER — ACCOUNT SUMMARY
-Ledger owner: ${nm(me)}
-Account holder: ${nm(a)}
-Statement period: ${d.period}
-Generated: ${fdate(today())}
-Total purchases / items: ${money(d.lines[0][1])}
-Total repayments / payments: ${money(d.lines[1][1])}
-Total amount charged to account: ${money(d.lines[2][1])}
-Total amount repaid to ledger owner: ${money(d.lines[3][1])}
-Current outstanding balance: ${balText(d.net,a)}`;
-  try{
-    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(summary);
-    else{
-      const field=document.createElement('textarea');field.value=summary;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();
-      const copied=document.execCommand('copy');field.remove();if(!copied)throw new Error('Clipboard access is unavailable.');
-    }
-    toast('Account summary copied.');
-  }catch(e){toast('Could not copy the summary. Check clipboard permissions and try again.')}
-}
-function text(w,id,period='all'){
-  const a=ui.acct,n=net(a);
-  if(w==='tx'){const t=S.txs.find(x=>x.id===id);return `*Roommates Ledger*\n${typeLabel(t)}\nFrom ledger of: ${nm(me)}\nAccount: ${nm(t.account)}\nDate: ${fdate(t.date)}\n${detail(t)}: ${money(t.amount)}${t.notes?'\nNote: '+t.notes:''}\n\nBalance now: ${balText(net(t.account),t.account)}`}
-  if(w==='sum'){const d=stData(a,period);return `*Roommates Ledger — Summary*\nLedger owner: ${nm(me)}\nAccount: ${nm(a)}\nStatement period: ${d.period}\nTotal purchases: ${money(d.lines[0][1])}\nTotal repayments: ${money(d.lines[1][1])}\n${balText(n,a)}\nDate: ${fdate(today())}`}
-  const d=stData(a,period);
-  return `*Roommates Ledger — Statement*\nLedger of: ${nm(me)}\nAccount: ${nm(a)}\nDate: ${fdate(today())}\n\n`+d.rows.map(({t})=>`${fdate(t.date)} | ${detail(t)} | ${sgn(t)>0?'+':'−'}${money(t.amount)}`).join('\n')+'\n\n'+d.lines.map(l=>`${l[0]}: ${money(l[1])}`).join('\n')+`\n*${balText(n,a)}*`;
-}
-function waOpen(t){window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')}
 
 /* ---------- Actions ---------- */
 function exportData(){
@@ -445,10 +342,7 @@ function act(a,d){
     case 'nav':ui.view=d.v;render();break;
     case 'open':ui.acct=d.id;ui.view='acct';ui.range='all';ui.q='';render();break;
     case 'form':form(d.k,d.id,d.acct);break;
-    case 'exportPanel':exportPanel();break;
-    case 'downloadPng':case 'downloadPdf':case 'sharePng':case 'sharePdf':exportAction(a);break;
-    case 'copySummary':copySummary();break;
-    case 'printStatement':printStatement(ui.acct,selectedPeriod());break;
+    case 'shareAccount':shareAccount();break;
     case 'close':closeModal();break;
     case 'del':{const t=S.txs.find(x=>x.id===d.id);
       if(confirm(`Delete this ${t.kind==='item'?'item':'payment'} (${detail(t)}, ${money(t.amount)}, ${fdate(t.date)})? This cannot be undone.`)){S.txs=S.txs.filter(x=>x.id!==d.id);save();render();toast('Deleted')}break}
@@ -464,10 +358,6 @@ function act(a,d){
       if(d.id===me)return alert('Switch to another user before removing this profile.');
       if(S.roommates.length<=2)return alert('Keep at least two roommates.');
       if(confirm(`Remove ${nm(d.id)}?`)){S.roommates=S.roommates.filter(r=>r.id!==d.id);save();render()}break}
-    case 'pdf':printStatement(ui.acct,'all');break;
-    case 'png':exportAction('downloadPng');break;
-    case 'shareImg':exportAction('sharePng');break;
-    case 'wa':waOpen(text(d.w,d.id,d.period||'all'));break;
     case 'export':exportData();break;
     case 'import':$('#file').click();break;
   }
