@@ -80,6 +80,7 @@ if(me&&!S.roommates.some(r=>r.id===me))me=null;
 // Ihsan is the default ledger owner on first open
 if(!me){const ih=S.roommates.find(r=>r.name==='Ihsan');if(ih){me=ih.id;try{localStorage.setItem(UK,me)}catch(e){}}}
 let ui={view:'home',acct:null};
+let backPressedAt=0;
 
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));return true}catch(e){alert('Could not save your data. Free some browser storage and try again.');return false}}
 const nm=id=>{const r=S.roommates.find(x=>x.id===id);return r?r.name:'Unknown'};
@@ -93,6 +94,13 @@ function detail(t){return t.kind==='item'?t.desc+(t.qty?' ('+t.qty+')':''):t.dir
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
 function modal(h){closeModal();const o=document.createElement('div');o.className='ov';o.id='modal';o.innerHTML='<div class="sheet">'+h+'</div>';o.addEventListener('mousedown',e=>{if(e.target===o)closeModal()});document.body.appendChild(o)}
 function closeModal(){const o=$('#modal');if(o)o.remove()}
+function keepAppHistory(){history.pushState({roommatesLedger:true},'')}
+window.addEventListener('popstate',()=>{
+  if($('#modal')){closeModal();backPressedAt=0;keepAppHistory();return}
+  if(me&&ui.view!=='home'){ui.view='home';ui.acct=null;backPressedAt=0;render();keepAppHistory();return}
+  if(Date.now()-backPressedAt<2000){backPressedAt=0;return}
+  backPressedAt=Date.now();toast('Press back again to exit.');keepAppHistory();
+});
 
 /* ---------- Rendering ---------- */
 function render(){
@@ -268,6 +276,7 @@ function act(a,d){
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)act(b.dataset.a,b.dataset)});
 render();
+keepAppHistory();
 </script>
 </body>
 </html>
